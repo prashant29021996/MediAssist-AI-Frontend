@@ -3,41 +3,20 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { organizationsApi } from "@/lib/api";
-
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  email: string;
-  is_active: boolean;
-}
 
 export default function DashboardPage() {
-  const { user, loading, logout, isAuthenticated } = useAuth();
+  const { user, loading, logout, isAuthenticated, isSuperAdmin } = useAuth();
   const router = useRouter();
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [orgLoading, setOrgLoading] = useState(true);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push("/login");
     }
-  }, [loading, isAuthenticated, router]);
-
-  const [orgError, setOrgError] = useState("");
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      organizationsApi
-        .list()
-        .then((res) => setOrganizations(res.data))
-        .catch((err: unknown) => {
-          setOrgError(err instanceof Error ? err.message : "Failed to load organizations");
-        })
-        .finally(() => setOrgLoading(false));
+    // Super admins get redirected to the admin portal
+    if (!loading && isAuthenticated && isSuperAdmin) {
+      router.push("/admin");
     }
-  }, [isAuthenticated]);
+  }, [loading, isAuthenticated, isSuperAdmin, router]);
 
   if (loading) {
     return (
@@ -51,16 +30,13 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">MediAssist AI</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Clinic Dashboard</h1>
+            <p className="text-sm text-gray-500">{user?.email}</p>
+          </div>
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push("/admin")}
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              Admin Portal
-            </button>
-            <span className="text-sm text-gray-600">
-              {user?.email}
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+              Clinic Admin
             </span>
             <button
               onClick={logout}
@@ -74,102 +50,183 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900">Dashboard</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Welcome to Your Clinic</h2>
           <p className="mt-1 text-sm text-gray-600">
-            Welcome to MediAssist AI. Manage your clinics and settings.
+            Manage your clinic operations — doctors, patients, appointments, and settings.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Stats Cards */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900">Organizations</h3>
-            <p className="mt-2 text-3xl font-bold text-blue-600">
-              {orgLoading ? "..." : organizations.length}
-            </p>
-            <p className="mt-1 text-sm text-gray-500">Total clinics</p>
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Doctors</h3>
+            <p className="mt-2 text-3xl font-bold text-blue-600">—</p>
+            <p className="mt-1 text-xs text-gray-400">Coming in Sprint 2</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900">Users</h3>
-            <p className="mt-2 text-3xl font-bold text-green-600">-</p>
-            <p className="mt-1 text-sm text-gray-500">Coming soon</p>
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Patients</h3>
+            <p className="mt-2 text-3xl font-bold text-green-600">—</p>
+            <p className="mt-1 text-xs text-gray-400">Coming in Sprint 3</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900">Appointments</h3>
-            <p className="mt-2 text-3xl font-bold text-purple-600">-</p>
-            <p className="mt-1 text-sm text-gray-500">Coming soon</p>
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Appointments</h3>
+            <p className="mt-2 text-3xl font-bold text-purple-600">—</p>
+            <p className="mt-1 text-xs text-gray-400">Coming in Sprint 4</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Documents</h3>
+            <p className="mt-2 text-3xl font-bold text-yellow-600">—</p>
+            <p className="mt-1 text-xs text-gray-400">Coming in Sprint 5</p>
           </div>
         </div>
 
-        {/* Organizations List */}
-        <div className="mt-8">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Organizations</h3>
-          {orgError && (
-            <div className="bg-red-50 text-red-500 text-sm p-3 rounded-md mb-4">
-              {orgError}
+        {/* Management Sections */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Staff Management */}
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-medium text-gray-900">Staff Management</h3>
             </div>
-          )}
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Slug
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {orgLoading ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
-                      Loading...
-                    </td>
-                  </tr>
-                ) : organizations.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
-                      No organizations found
-                    </td>
-                  </tr>
-                ) : (
-                  organizations.map((org) => (
-                    <tr key={org.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {org.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {org.slug}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {org.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            org.is_active
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {org.is_active ? "Active" : "Suspended"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Doctors</p>
+                  <p className="text-sm text-gray-500">Add and manage doctors</p>
+                </div>
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Sprint 2</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Receptionists</p>
+                  <p className="text-sm text-gray-500">Manage front-desk staff</p>
+                </div>
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Sprint 2</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Roles & Permissions</p>
+                  <p className="text-sm text-gray-500">Assign roles to staff</p>
+                </div>
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Sprint 2</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Clinic Settings */}
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-medium text-gray-900">Clinic Settings</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Working Hours</p>
+                  <p className="text-sm text-gray-500">Set clinic operating hours</p>
+                </div>
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Sprint 2</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Holidays</p>
+                  <p className="text-sm text-gray-500">Configure clinic holidays</p>
+                </div>
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Sprint 2</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Departments</p>
+                  <p className="text-sm text-gray-500">Manage clinic departments</p>
+                </div>
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Sprint 2</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Patient Operations */}
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-medium text-gray-900">Patient Operations</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Register Patient</p>
+                  <p className="text-sm text-gray-500">Add new patients to the system</p>
+                </div>
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Sprint 3</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Patient Records</p>
+                  <p className="text-sm text-gray-500">View and manage patient history</p>
+                </div>
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Sprint 3</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Document Upload</p>
+                  <p className="text-sm text-gray-500">Upload patient reports and scans</p>
+                </div>
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Sprint 5</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Appointment Management */}
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-medium text-gray-900">Appointments</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Schedule</p>
+                  <p className="text-sm text-gray-500">Book and manage appointments</p>
+                </div>
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Sprint 4</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Calendar View</p>
+                  <p className="text-sm text-gray-500">Daily/weekly appointment calendar</p>
+                </div>
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Sprint 4</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Check-in / Queue</p>
+                  <p className="text-sm text-gray-500">Patient check-in and queue management</p>
+                </div>
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Sprint 4</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* AI Features Section */}
+        <div className="mt-8 bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 className="text-lg font-medium text-gray-900">AI-Powered Features</h3>
+          </div>
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 border border-gray-200 rounded-lg text-center hover:shadow-md transition-shadow">
+              <div className="text-3xl mb-2">🤖</div>
+              <p className="font-medium text-gray-900">AI Summaries</p>
+              <p className="text-sm text-gray-500">Coming in Sprint 9</p>
+            </div>
+            <div className="p-4 border border-gray-200 rounded-lg text-center hover:shadow-md transition-shadow">
+              <div className="text-3xl mb-2">💬</div>
+              <p className="font-medium text-gray-900">AI Chat</p>
+              <p className="text-sm text-gray-500">Coming in Sprint 9</p>
+            </div>
+            <div className="p-4 border border-gray-200 rounded-lg text-center hover:shadow-md transition-shadow">
+              <div className="text-3xl mb-2">📊</div>
+              <p className="font-medium text-gray-900">Trend Analysis</p>
+              <p className="text-sm text-gray-500">Coming in Sprint 9</p>
+            </div>
           </div>
         </div>
       </main>

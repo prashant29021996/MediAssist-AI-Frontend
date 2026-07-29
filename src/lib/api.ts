@@ -136,7 +136,16 @@ export const authApi = {
       authenticated: false,
     }),
 
-  me: () => request<{ data: { user_id: string; email: string } }>("/auth/me"),
+  me: () =>
+    request<{
+      data: {
+        user_id: string;
+        email: string;
+        role_id?: string;
+        tenant_id?: string;
+        permissions?: string[];
+      };
+    }>("/auth/me"),
 };
 
 // Organizations API

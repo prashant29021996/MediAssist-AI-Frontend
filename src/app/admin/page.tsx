@@ -5,99 +5,116 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { organizationsApi, tenantApi } from "@/lib/api";
 
-export default function AdminDashboard() {
-  const { user, loading, isAuthenticated } = useAuth();
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"create" | "signups" | "list">("create");
-  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; slug: string; email: string; is_active: boolean }>>([]);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [loadingOrgs, setLoadingOrgs] = useState(true);
+interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  email: string;
+  is_active: boolean;
+}
 
-  // Create tenant form
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    address: "",
-    latitude: 0,
-    longitude: 0,
-    admin_email: "",
-    admin_first_name: "",
-    admin_last_name: "",
-    admin_password: "",
-  });
-  const [formError, setFormError] = useState("");
-  const [formSuccess, setFormSuccess] = useState("");
-  const [formLoading, setFormLoading] = useState(false);
+interface PendingSignup {
+  id: string;
+  organization_name: string;
+  admin_email: string;
+  admin_first_name: string;
+  admin_last_name: string;
+  status: string;
+  created_at: string;
+}
+
+export default function SuperAdminDashboard() {
+  const { user, loading, logout, isAuthenticated, isSuperAdmin } = useAuth();
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"overview" | "signups" | "tenants">("overview");
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [pendingSignups, setPendingSignups] = useState<PendingSignup[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [declineModal, setDeclineModal] = useState<{ id: string; name: string } | null>(null);
+  const [declineReason, setDeclineReason] = useState("");
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push("/login");
     }
-  }, [loading, isAuthenticated, router]);
+    if (!loading && isAuthenticated && !isSuperAdmin) {
+      router.push("/dashboard");
+    }
+  }, [loading, isAuthenticated, isSuperAdmin, router]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && isSuperAdmin) {
       loadData();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isSuperAdmin]);
 
   const loadData = async () => {
+    setLoadingData(true);
     try {
       const [orgsRes, pendingRes] = await Promise.all([
         organizationsApi.list(),
         tenantApi.listPending().catch(() => ({ data: [] })),
       ]);
       setOrganizations(orgsRes.data);
-      setPendingCount(pendingRes.data.length);
+      setPendingSignups(pendingRes.data);
     } catch {
       // silently fail
     } finally {
-      setLoadingOrgs(false);
+      setLoadingData(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === "latitude" || name === "longitude" ? parseFloat(value) || 0 : value,
-    }));
-  };
-
-  const handleCreateTenant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError("");
-    setFormSuccess("");
-    setFormLoading(true);
-
+  const handleApprove = async (id: string) => {
+    setActionLoading(id);
     try {
-      // Use the signup endpoint to create a pending request
-      const signupRes = await tenantApi.signup({
-        organization_name: formData.name,
-        admin_email: formData.admin_email,
-        admin_first_name: formData.admin_first_name,
-        admin_last_name: formData.admin_last_name,
-        admin_phone: formData.phone || undefined,
-        password: formData.admin_password,
-        address: formData.address || undefined,
-        latitude: formData.latitude || undefined,
-        longitude: formData.longitude || undefined,
-      });
-
-      // Immediately approve it
-      await tenantApi.approve(signupRes.data.id);
-
-      setFormSuccess(`Tenant "${formData.name}" created successfully! Admin can login with ${formData.admin_email}`);
-      setFormData({
-        name: "", phone: "", address: "",
-        latitude: 0, longitude: 0,
-        admin_email: "", admin_first_name: "", admin_last_name: "", admin_password: "",
-      });
+      await tenantApi.approve(id);
+      setPendingSignups((prev) => prev.filter((s) => s.id !== id));
       loadData();
     } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : "Failed to create tenant");
+      alert(err instanceof Error ? err.message : "Failed to approve");
     } finally {
-      setFormLoading(false);
+      setActionLoading(null);
+    }
+  };
+
+  const handleDecline = async () => {
+    if (!declineModal || !declineReason.trim()) return;
+    setActionLoading(declineModal.id);
+    try {
+      await tenantApi.decline(declineModal.id, declineReason);
+      setPendingSignups((prev) => prev.filter((s) => s.id !== declineModal.id));
+      setDeclineModal(null);
+      setDeclineReason("");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to decline");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSuspend = async (id: string) => {
+    if (!confirm("Are you sure you want to suspend this tenant?")) return;
+    setActionLoading(id);
+    try {
+      await organizationsApi.suspend(id);
+      loadData();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to suspend");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleActivate = async (id: string) => {
+    setActionLoading(id);
+    try {
+      await organizationsApi.activate(id);
+      loadData();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to activate");
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -114,15 +131,18 @@ export default function AdminDashboard() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Admin Portal</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Super Admin Portal</h1>
             <p className="text-sm text-gray-500">{user?.email}</p>
           </div>
           <div className="flex items-center gap-4">
+            <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">
+              Super Admin
+            </span>
             <button
-              onClick={() => router.push("/dashboard")}
-              className="text-sm text-blue-600 hover:text-blue-800"
+              onClick={logout}
+              className="text-sm text-red-600 hover:text-red-800"
             >
-              Dashboard
+              Sign out
             </button>
           </div>
         </div>
@@ -130,59 +150,58 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900">Total Tenants</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Tenants</h3>
             <p className="mt-2 text-3xl font-bold text-blue-600">
-              {loadingOrgs ? "..." : organizations.length}
+              {loadingData ? "..." : organizations.length}
             </p>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900">Active</h3>
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Active</h3>
             <p className="mt-2 text-3xl font-bold text-green-600">
-              {loadingOrgs ? "..." : organizations.filter((o) => o.is_active).length}
+              {loadingData ? "..." : organizations.filter((o) => o.is_active).length}
             </p>
           </div>
-          <div
-            className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => { setActiveTab("signups"); router.push("/admin/tenants"); }}
-          >
-            <h3 className="text-lg font-medium text-gray-900">Pending Signups</h3>
-            <p className="mt-2 text-3xl font-bold text-yellow-600">{pendingCount}</p>
-            <p className="text-xs text-blue-600 mt-1">Click to review →</p>
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Suspended</h3>
+            <p className="mt-2 text-3xl font-bold text-red-600">
+              {loadingData ? "..." : organizations.filter((o) => !o.is_active).length}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Pending Signups</h3>
+            <p className="mt-2 text-3xl font-bold text-yellow-600">{pendingSignups.length}</p>
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Tab Navigation */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="flex gap-8">
             <button
-              onClick={() => setActiveTab("create")}
+              onClick={() => setActiveTab("overview")}
               className={`pb-4 text-sm font-medium border-b-2 ${
-                activeTab === "create"
+                activeTab === "overview"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              + Create Tenant
+              Platform Overview
             </button>
             <button
-              onClick={() => {
-                setActiveTab("signups");
-                router.push("/admin/tenants");
-              }}
+              onClick={() => setActiveTab("signups")}
               className={`pb-4 text-sm font-medium border-b-2 ${
                 activeTab === "signups"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              Review Signups {pendingCount > 0 && `(${pendingCount})`}
+              Pending Signups {pendingSignups.length > 0 && `(${pendingSignups.length})`}
             </button>
             <button
-              onClick={() => setActiveTab("list")}
+              onClick={() => setActiveTab("tenants")}
               className={`pb-4 text-sm font-medium border-b-2 ${
-                activeTab === "list"
+                activeTab === "tenants"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
@@ -192,174 +211,145 @@ export default function AdminDashboard() {
           </nav>
         </div>
 
-        {/* Create Tenant Form */}
-        {activeTab === "create" && (
-          <div className="bg-white rounded-lg shadow p-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">
-              Create New Tenant (Clinic)
-            </h2>
-
-            <form onSubmit={handleCreateTenant} className="space-y-6">
-              {formError && (
-                <div className="bg-red-50 text-red-500 text-sm p-3 rounded-md">{formError}</div>
-              )}
-              {formSuccess && (
-                <div className="bg-green-50 text-green-500 text-sm p-3 rounded-md">{formSuccess}</div>
-              )}
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Clinic Details</h3>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Clinic Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Sunrise Clinic"
-                  />
-                </div>
-
-                <div>
+        {/* Platform Overview Tab */}
+        {activeTab === "overview" && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h3 className="text-lg font-medium text-gray-900">Tenant Management</h3>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Phone</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="+1234567890"
-                    />
+                    <p className="font-medium text-gray-900">Review Signups</p>
+                    <p className="text-sm text-gray-500">
+                      {pendingSignups.length > 0
+                        ? `${pendingSignups.length} clinics waiting for approval`
+                        : "No pending signups"}
+                    </p>
                   </div>
+                  <button
+                    onClick={() => setActiveTab("signups")}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Review →
+                  </button>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Address</label>
-                  <textarea
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    rows={2}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="123 Main St, City, State"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Latitude</label>
-                    <input
-                      type="number"
-                      step="any"
-                      name="latitude"
-                      value={formData.latitude}
-                      onChange={handleChange}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="28.6139"
-                    />
+                    <p className="font-medium text-gray-900">Manage Tenants</p>
+                    <p className="text-sm text-gray-500">
+                      {organizations.length} registered clinics
+                    </p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Longitude</label>
-                    <input
-                      type="number"
-                      step="any"
-                      name="longitude"
-                      value={formData.longitude}
-                      onChange={handleChange}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="77.2090"
-                    />
-                  </div>
+                  <button
+                    onClick={() => setActiveTab("tenants")}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    View All →
+                  </button>
                 </div>
               </div>
+            </div>
 
-              <div className="border-t pt-6 space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Clinic Admin Account</h3>
-                <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h3 className="text-lg font-medium text-gray-900">Platform Info</h3>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      First Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="admin_first_name"
-                      required
-                      value={formData.admin_first_name}
-                      onChange={handleChange}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="John"
-                    />
+                    <p className="font-medium text-gray-900">Your Role</p>
+                    <p className="text-sm text-gray-500">Super Admin — Full platform access</p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Last Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="admin_last_name"
-                      required
-                      value={formData.admin_last_name}
-                      onChange={handleChange}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Doe"
-                    />
-                  </div>
+                  <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">Active</span>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Admin Email <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      name="admin_email"
-                      required
-                      value={formData.admin_email}
-                      onChange={handleChange}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="admin@clinic.com"
-                    />
+                    <p className="font-medium text-gray-900">Permissions</p>
+                    <p className="text-sm text-gray-500">All 19 permissions granted</p>
                   </div>
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Full</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Admin Password <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      name="admin_password"
-                      required
-                      minLength={8}
-                      value={formData.admin_password}
-                      onChange={handleChange}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Min 8 characters"
-                    />
+                    <p className="font-medium text-gray-900">Tenant Approval</p>
+                    <p className="text-sm text-gray-500">Only you can approve new clinics</p>
                   </div>
+                  <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Exclusive</span>
                 </div>
               </div>
-
-              <button
-                type="submit"
-                disabled={formLoading}
-                className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                {formLoading ? "Creating..." : "Create Tenant & Admin Account"}
-              </button>
-            </form>
+            </div>
           </div>
         )}
 
-        {/* All Tenants List */}
-        {activeTab === "list" && (
+        {/* Pending Signups Tab */}
+        {activeTab === "signups" && (
+          <div>
+            {loadingData ? (
+              <div className="text-center py-12 text-gray-500">Loading signups...</div>
+            ) : pendingSignups.length === 0 ? (
+              <div className="bg-white rounded-lg shadow p-12 text-center">
+                <div className="text-gray-400 text-5xl mb-4">✅</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">All Caught Up</h3>
+                <p className="text-gray-500">No pending clinic registration requests.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {pendingSignups.map((signup) => (
+                  <div key={signup.id} className="bg-white rounded-lg shadow p-6">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {signup.organization_name}
+                          </h3>
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            Pending
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mt-4">
+                          <div>
+                            <span className="font-medium">Admin:</span> {signup.admin_first_name} {signup.admin_last_name}
+                          </div>
+                          <div>
+                            <span className="font-medium">Email:</span> {signup.admin_email}
+                          </div>
+                          <div>
+                            <span className="font-medium">Submitted:</span>{" "}
+                            {new Date(signup.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <button
+                          onClick={() => handleApprove(signup.id)}
+                          disabled={actionLoading === signup.id}
+                          className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50"
+                        >
+                          {actionLoading === signup.id ? "..." : "Approve"}
+                        </button>
+                        <button
+                          onClick={() => setDeclineModal({ id: signup.id, name: signup.organization_name })}
+                          disabled={actionLoading === signup.id}
+                          className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 disabled:opacity-50"
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* All Tenants Tab */}
+        {activeTab === "tenants" && (
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">All Tenants</h3>
+              <h3 className="text-lg font-medium text-gray-900">Registered Tenants</h3>
             </div>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -368,13 +358,14 @@ export default function AdminDashboard() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Slug</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {loadingOrgs ? (
-                  <tr><td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">Loading...</td></tr>
+                {loadingData ? (
+                  <tr><td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">Loading...</td></tr>
                 ) : organizations.length === 0 ? (
-                  <tr><td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">No tenants yet</td></tr>
+                  <tr><td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">No tenants yet</td></tr>
                 ) : (
                   organizations.map((org) => (
                     <tr key={org.id}>
@@ -388,6 +379,25 @@ export default function AdminDashboard() {
                           {org.is_active ? "Active" : "Suspended"}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {org.is_active ? (
+                          <button
+                            onClick={() => handleSuspend(org.id)}
+                            disabled={actionLoading === org.id}
+                            className="text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+                          >
+                            {actionLoading === org.id ? "..." : "Suspend"}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleActivate(org.id)}
+                            disabled={actionLoading === org.id}
+                            className="text-green-600 hover:text-green-800 font-medium disabled:opacity-50"
+                          >
+                            {actionLoading === org.id ? "..." : "Activate"}
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -396,6 +406,42 @@ export default function AdminDashboard() {
           </div>
         )}
       </main>
+
+      {/* Decline Modal */}
+      {declineModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Decline {declineModal.name}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Please provide a reason for declining this registration.
+            </p>
+            <textarea
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Reason for declining..."
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => { setDeclineModal(null); setDeclineReason(""); }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDecline}
+                disabled={!declineReason.trim() || actionLoading === declineModal.id}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                {actionLoading === declineModal.id ? "..." : "Decline"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
