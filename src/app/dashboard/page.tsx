@@ -54,14 +54,7 @@ export default function DashboardPage() {
           <p className="mt-1 text-sm text-gray-600">
             Manage your clinic operations — doctors, patients, appointments, and settings.
           </p>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Doctors</h3>
-            <p className="mt-2 text-3xl font-bold text-blue-600">—</p>
-              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                        <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
                 <div>
                   <p className="font-medium text-gray-900">Manage Users</p>
                   <p className="text-sm text-gray-500">
@@ -75,6 +68,13 @@ export default function DashboardPage() {
                   Manage →
                 </button>
               </div>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Doctors</h3>
+            <p className="mt-2 text-3xl font-bold text-blue-600">—</p>
             <p className="mt-1 text-xs text-gray-400">Coming in Sprint 2</p>
           </div>
 
