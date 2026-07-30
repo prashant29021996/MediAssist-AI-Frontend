@@ -170,6 +170,64 @@ export const organizationsApi = {
     request<{ message: string }>(`/organizations/${id}/activate`, { method: "POST" }),
 };
 
+// Users API
+export const usersApi = {
+  list: () =>
+    request<{ data: Array<{
+      id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      role_id: string;
+      tenant_id: string;
+      is_active: boolean;
+      must_change_password: boolean;
+      created_at: string;
+    }> }>("/users"),
+
+  listRoles: () =>
+    request<{ data: Array<{ id: string; name: string; slug: string }> }>("/users/roles"),
+
+  create: (data: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+    password: string;
+    role_id: string;
+  }) =>
+    request<{ data: {
+      id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      role_id: string;
+      tenant_id: string;
+      is_active: boolean;
+      must_change_password: boolean;
+      created_at: string;
+    } }>("/users", { method: "POST", body: data }),
+
+  getById: (id: string) =>
+    request<{ data: {
+      id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      role_id: string;
+      tenant_id: string;
+      is_active: boolean;
+      must_change_password: boolean;
+      created_at: string;
+    } }>(`/users/${id}`),
+
+  toggleActive: (id: string) =>
+    request<{ data: unknown; message: string }>(`/users/${id}/toggle-active`, { method: "POST" }),
+};
+
 // Tenant Signup API
 export const tenantApi = {
   signup: (data: {

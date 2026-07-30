@@ -235,20 +235,20 @@ export default function SuperAdminDashboard() {
                     Review →
                   </button>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">Manage Tenants</p>
-                    <p className="text-sm text-gray-500">
-                      {organizations.length} registered clinics
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab("tenants")}
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    View All →
-                  </button>
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">Manage Tenants</p>
+                  <p className="text-sm text-gray-500">
+                    {organizations.length} registered clinics
+                  </p>
                 </div>
+                <button
+                  onClick={() => setActiveTab("tenants")}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  View All →
+                </button>
+              </div>
               </div>
             </div>
 
