@@ -4,12 +4,27 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { usersApi } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Modal } from "@/components/ui/modal";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardBody } from "@/components/ui/card";
+import { UserMenu } from "@/components/user-menu";
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  EmptyState,
+  Input,
+  LoadingScreen,
+  Modal,
+  PageHeader,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui";
+import { DropdownItem } from "@/components/ui/dropdown";
 
 interface User {
   id: string;
@@ -59,12 +74,6 @@ export default function UsersPage() {
     }
   }, [loading, isAuthenticated, hasPermission, router]);
 
-  useEffect(() => {
-    if (isAuthenticated && hasPermission("user.create")) {
-      loadData();
-    }
-  }, [isAuthenticated]);
-
   const loadData = async () => {
     setLoadingData(true);
     try {
@@ -80,6 +89,12 @@ export default function UsersPage() {
       setLoadingData(false);
     }
   };
+
+  useEffect(() => {
+    if (isAuthenticated && hasPermission("user.create")) {
+      loadData();
+    }
+  }, [isAuthenticated, hasPermission]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -140,37 +155,29 @@ export default function UsersPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-            <p className="text-sm text-gray-500">{user?.email}</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="text-sm text-gray-600 hover:text-gray-800"
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => router.push("/admin")}
-              className="text-sm text-gray-600 hover:text-gray-800"
-            >
-              Admin Portal
-            </button>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="User Management"
+        subtitle={user?.email}
+        actions={
+          <UserMenu
+            extraItems={
+              <>
+                <DropdownItem onClick={() => router.push("/dashboard")}>
+                  Dashboard
+                </DropdownItem>
+                <DropdownItem onClick={() => router.push("/admin")}>
+                  Admin Portal
+                </DropdownItem>
+              </>
+            }
+          />
+        }
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card>
@@ -191,57 +198,59 @@ export default function UsersPage() {
             {loadingData ? (
               <div className="text-center py-12 text-gray-500">Loading users...</div>
             ) : users.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-gray-400 text-5xl mb-4">👥</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Users Yet</h3>
-                <p className="text-gray-500">Get started by adding your first staff member.</p>
-              </div>
+              <EmptyState
+                icon="👥"
+                title="No Users Yet"
+                description="Get started by adding your first staff member."
+              />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Password</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {users.map((u) => (
-                      <tr key={u.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {u.first_name} {u.last_name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{u.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{u.phone || "-"}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge variant={u.is_active ? "success" : "danger"}>
-                            {u.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {u.must_change_password ? (
-                            <Badge variant="warning">Must Change</Badge>
-                          ) : (
-                            <Badge variant="gray">Set</Badge>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button
-                            onClick={() => handleToggleActive(u.id)}
-                            className={u.is_active ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800"}
-                          >
-                            {u.is_active ? "Deactivate" : "Activate"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Password</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((u) => (
+                    <TableRow key={u.id}>
+                      <TableCell className="font-medium text-gray-900">
+                        {u.first_name} {u.last_name}
+                      </TableCell>
+                      <TableCell>{u.email}</TableCell>
+                      <TableCell>{u.phone || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant={u.is_active ? "success" : "danger"}>
+                          {u.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {u.must_change_password ? (
+                          <Badge variant="warning">Must Change</Badge>
+                        ) : (
+                          <Badge variant="gray">Set</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <button
+                          onClick={() => handleToggleActive(u.id)}
+                          className={
+                            u.is_active
+                              ? "text-red-600 hover:text-red-800"
+                              : "text-green-600 hover:text-green-800"
+                          }
+                        >
+                          {u.is_active ? "Deactivate" : "Activate"}
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardBody>
         </Card>
@@ -321,7 +330,7 @@ export default function UsersPage() {
               Cancel
             </Button>
             <Button type="submit" loading={submitting}>
-              Create User
+              {submitting ? "Creating..." : "Create User"}
             </Button>
           </div>
         </form>

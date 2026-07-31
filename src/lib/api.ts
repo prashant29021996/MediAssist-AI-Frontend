@@ -146,6 +146,12 @@ export const authApi = {
         permissions?: string[];
       };
     }>("/auth/me"),
+
+  changePassword: (oldPassword: string, newPassword: string) =>
+    request<{ message: string }>("/auth/change-password", {
+      method: "POST",
+      body: { old_password: oldPassword, new_password: newPassword },
+    }),
 };
 
 // Organizations API

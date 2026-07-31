@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { tenantApi } from "@/lib/api";
+import { Alert, Button, Input, Textarea } from "@/components/ui";
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -105,65 +106,49 @@ export default function SignupPage() {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 text-red-500 text-sm p-3 rounded-md">{error}</div>
-          )}
+          {error && <Alert variant="error">{error}</Alert>}
 
           <div className="space-y-4">
             <h2 className="text-lg font-medium text-gray-900">Clinic Information</h2>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Clinic Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="organization_name"
-                required
-                value={formData.organization_name}
-                onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Sunrise Clinic"
-              />
-            </div>
+            <Input
+              label="Clinic Name *"
+              type="text"
+              name="organization_name"
+              required
+              value={formData.organization_name}
+              onChange={handleChange}
+              placeholder="Sunrise Clinic"
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Address</label>
-              <textarea
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                rows={2}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="123 Main St, City, State"
-              />
-            </div>
+            <Textarea
+              label="Address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              rows={2}
+              placeholder="123 Main St, City, State"
+            />
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Latitude</label>
-                <input
-                  type="number"
-                  step="any"
-                  name="latitude"
-                  value={formData.latitude}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="28.6139"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Longitude</label>
-                <input
-                  type="number"
-                  step="any"
-                  name="longitude"
-                  value={formData.longitude}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="77.2090"
-                />
-              </div>
+              <Input
+                label="Latitude"
+                type="number"
+                step="any"
+                name="latitude"
+                value={formData.latitude}
+                onChange={handleChange}
+                placeholder="28.6139"
+              />
+              <Input
+                label="Longitude"
+                type="number"
+                step="any"
+                name="longitude"
+                value={formData.longitude}
+                onChange={handleChange}
+                placeholder="77.2090"
+              />
             </div>
           </div>
 
@@ -171,111 +156,80 @@ export default function SignupPage() {
             <h2 className="text-lg font-medium text-gray-900">Admin Account</h2>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  First Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="admin_first_name"
-                  required
-                  value={formData.admin_first_name}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="John"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Last Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="admin_last_name"
-                  required
-                  value={formData.admin_last_name}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Doe"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                name="admin_email"
+              <Input
+                label="First Name *"
+                type="text"
+                name="admin_first_name"
                 required
-                value={formData.admin_email}
+                value={formData.admin_first_name}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="admin@clinic.com"
+                placeholder="John"
+              />
+              <Input
+                label="Last Name *"
+                type="text"
+                name="admin_last_name"
+                required
+                value={formData.admin_last_name}
+                onChange={handleChange}
+                placeholder="Doe"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Phone</label>
-              <input
-                type="tel"
-                name="admin_phone"
-                value={formData.admin_phone}
-                onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="+1234567890"
-              />
-            </div>
+            <Input
+              label="Email *"
+              type="email"
+              name="admin_email"
+              required
+              value={formData.admin_email}
+              onChange={handleChange}
+              placeholder="admin@clinic.com"
+            />
+
+            <Input
+              label="Phone"
+              type="tel"
+              name="admin_phone"
+              value={formData.admin_phone}
+              onChange={handleChange}
+              placeholder="+1234567890"
+            />
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Password <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  required
-                  minLength={8}
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Min 8 characters"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Confirm Password <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Repeat password"
-                />
-              </div>
+              <Input
+                label="Password *"
+                type="password"
+                name="password"
+                required
+                minLength={8}
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Min 8 characters"
+              />
+              <Input
+                label="Confirm Password *"
+                type="password"
+                name="confirmPassword"
+                required
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Repeat password"
+              />
             </div>
           </div>
 
           <div className="flex gap-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-            >
+            <Button type="submit" loading={loading} className="flex-1 justify-center" size="lg">
               {loading ? "Submitting..." : "Submit Registration"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="secondary"
+              size="lg"
               onClick={() => router.push("/login")}
-              className="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
             >
               Back to Login
-            </button>
+            </Button>
           </div>
         </form>
       </div>

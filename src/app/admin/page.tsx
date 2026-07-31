@@ -4,6 +4,31 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { organizationsApi, tenantApi } from "@/lib/api";
+import { UserMenu } from "@/components/user-menu";
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  EmptyState,
+  InfoRow,
+  LoadingScreen,
+  Modal,
+  PageHeader,
+  StatCard,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tabs,
+  TabContent,
+  TabList,
+  TabTrigger,
+  Textarea,
+} from "@/components/ui";
 
 interface Organization {
   id: string;
@@ -24,7 +49,7 @@ interface PendingSignup {
 }
 
 export default function SuperAdminDashboard() {
-  const { user, loading, logout, isAuthenticated, isSuperAdmin } = useAuth();
+  const { loading, isAuthenticated, isSuperAdmin } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"overview" | "signups" | "tenants">("overview");
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -33,21 +58,6 @@ export default function SuperAdminDashboard() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [declineModal, setDeclineModal] = useState<{ id: string; name: string } | null>(null);
   const [declineReason, setDeclineReason] = useState("");
-
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push("/login");
-    }
-    if (!loading && isAuthenticated && !isSuperAdmin) {
-      router.push("/dashboard");
-    }
-  }, [loading, isAuthenticated, isSuperAdmin, router]);
-
-  useEffect(() => {
-    if (isAuthenticated && isSuperAdmin) {
-      loadData();
-    }
-  }, [isAuthenticated, isSuperAdmin]);
 
   const loadData = async () => {
     setLoadingData(true);
@@ -64,6 +74,21 @@ export default function SuperAdminDashboard() {
       setLoadingData(false);
     }
   };
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push("/login");
+    }
+    if (!loading && isAuthenticated && !isSuperAdmin) {
+      router.push("/dashboard");
+    }
+  }, [loading, isAuthenticated, isSuperAdmin, router]);
+
+  useEffect(() => {
+    if (isAuthenticated && isSuperAdmin) {
+      loadData();
+    }
+  }, [isAuthenticated, isSuperAdmin]);
 
   const handleApprove = async (id: string) => {
     setActionLoading(id);
@@ -119,194 +144,143 @@ export default function SuperAdminDashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Super Admin Portal</h1>
-            <p className="text-sm text-gray-500">{user?.email}</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">
-              Super Admin
-            </span>
-            <button
-              onClick={logout}
-              className="text-sm text-red-600 hover:text-red-800"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Super Admin Portal"
+        actions={<UserMenu badge={<Badge variant="danger">Super Admin</Badge>} />}
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Tenants</h3>
-            <p className="mt-2 text-3xl font-bold text-blue-600">
-              {loadingData ? "..." : organizations.length}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Active</h3>
-            <p className="mt-2 text-3xl font-bold text-green-600">
-              {loadingData ? "..." : organizations.filter((o) => o.is_active).length}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Suspended</h3>
-            <p className="mt-2 text-3xl font-bold text-red-600">
-              {loadingData ? "..." : organizations.filter((o) => !o.is_active).length}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Pending Signups</h3>
-            <p className="mt-2 text-3xl font-bold text-yellow-600">{pendingSignups.length}</p>
-          </div>
+          <StatCard
+            label="Total Tenants"
+            value={loadingData ? "..." : organizations.length}
+            color="blue"
+          />
+          <StatCard
+            label="Active"
+            value={loadingData ? "..." : organizations.filter((o) => o.is_active).length}
+            color="green"
+          />
+          <StatCard
+            label="Suspended"
+            value={loadingData ? "..." : organizations.filter((o) => !o.is_active).length}
+            color="red"
+          />
+          <StatCard
+            label="Pending Signups"
+            value={pendingSignups.length}
+            color="yellow"
+          />
         </div>
 
         {/* Tab Navigation */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="flex gap-8">
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={`pb-4 text-sm font-medium border-b-2 ${
-                activeTab === "overview"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Platform Overview
-            </button>
-            <button
-              onClick={() => setActiveTab("signups")}
-              className={`pb-4 text-sm font-medium border-b-2 ${
-                activeTab === "signups"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} defaultValue="overview">
+          <TabList>
+            <TabTrigger value="overview">Platform Overview</TabTrigger>
+            <TabTrigger value="signups">
               Pending Signups {pendingSignups.length > 0 && `(${pendingSignups.length})`}
-            </button>
-            <button
-              onClick={() => setActiveTab("tenants")}
-              className={`pb-4 text-sm font-medium border-b-2 ${
-                activeTab === "tenants"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              All Tenants ({organizations.length})
-            </button>
-          </nav>
-        </div>
+            </TabTrigger>
+            <TabTrigger value="tenants">All Tenants ({organizations.length})</TabTrigger>
+          </TabList>
 
-        {/* Platform Overview Tab */}
-        {activeTab === "overview" && (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h3 className="text-lg font-medium text-gray-900">Tenant Management</h3>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">Review Signups</p>
-                    <p className="text-sm text-gray-500">
-                      {pendingSignups.length > 0
+          {/* Platform Overview Tab */}
+          <TabContent value="overview">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <Card className="overflow-hidden">
+                <CardHeader className="bg-gray-50">
+                  <h3 className="text-lg font-medium text-gray-900">Tenant Management</h3>
+                </CardHeader>
+                <CardBody className="space-y-4">
+                  <InfoRow
+                    title="Review Signups"
+                    description={
+                      pendingSignups.length > 0
                         ? `${pendingSignups.length} clinics waiting for approval`
-                        : "No pending signups"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab("signups")}
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Review →
-                  </button>
-                </div>
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">Manage Tenants</p>
-                  <p className="text-sm text-gray-500">
-                    {organizations.length} registered clinics
-                  </p>
-                </div>
-                <button
-                  onClick={() => setActiveTab("tenants")}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  View All →
-                </button>
-              </div>
-              </div>
-            </div>
+                        : "No pending signups"
+                    }
+                    color="blue"
+                    action={
+                      <button
+                        onClick={() => setActiveTab("signups")}
+                        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Review →
+                      </button>
+                    }
+                  />
+                  <InfoRow
+                    title="Manage Tenants"
+                    description={`${organizations.length} registered clinics`}
+                    color="green"
+                    action={
+                      <button
+                        onClick={() => setActiveTab("tenants")}
+                        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        View All →
+                      </button>
+                    }
+                  />
+                </CardBody>
+              </Card>
 
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h3 className="text-lg font-medium text-gray-900">Platform Info</h3>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">Your Role</p>
-                    <p className="text-sm text-gray-500">Super Admin — Full platform access</p>
-                  </div>
-                  <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">Active</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">Permissions</p>
-                    <p className="text-sm text-gray-500">All 19 permissions granted</p>
-                  </div>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Full</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">Tenant Approval</p>
-                    <p className="text-sm text-gray-500">Only you can approve new clinics</p>
-                  </div>
-                  <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Exclusive</span>
-                </div>
-              </div>
+              <Card className="overflow-hidden">
+                <CardHeader className="bg-gray-50">
+                  <h3 className="text-lg font-medium text-gray-900">Platform Info</h3>
+                </CardHeader>
+                <CardBody className="space-y-4">
+                  <InfoRow
+                    title="Your Role"
+                    description="Super Admin — Full platform access"
+                    color="gray"
+                    action={<Badge variant="danger">Active</Badge>}
+                  />
+                  <InfoRow
+                    title="Permissions"
+                    description="All 19 permissions granted"
+                    color="gray"
+                    action={<Badge variant="success">Full</Badge>}
+                  />
+                  <InfoRow
+                    title="Tenant Approval"
+                    description="Only you can approve new clinics"
+                    color="gray"
+                    action={<Badge variant="warning">Exclusive</Badge>}
+                  />
+                </CardBody>
+              </Card>
             </div>
-          </div>
-        )}
+          </TabContent>
 
-        {/* Pending Signups Tab */}
-        {activeTab === "signups" && (
-          <div>
+          {/* Pending Signups Tab */}
+          <TabContent value="signups">
             {loadingData ? (
               <div className="text-center py-12 text-gray-500">Loading signups...</div>
             ) : pendingSignups.length === 0 ? (
-              <div className="bg-white rounded-lg shadow p-12 text-center">
-                <div className="text-gray-400 text-5xl mb-4">✅</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">All Caught Up</h3>
-                <p className="text-gray-500">No pending clinic registration requests.</p>
-              </div>
+              <Card>
+                <EmptyState
+                  icon="✅"
+                  title="All Caught Up"
+                  description="No pending clinic registration requests."
+                />
+              </Card>
             ) : (
               <div className="space-y-4">
                 {pendingSignups.map((signup) => (
-                  <div key={signup.id} className="bg-white rounded-lg shadow p-6">
+                  <Card key={signup.id} className="p-6">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900">
                             {signup.organization_name}
                           </h3>
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                            Pending
-                          </span>
+                          <Badge variant="warning">Pending</Badge>
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mt-4">
                           <div>
@@ -322,126 +296,138 @@ export default function SuperAdminDashboard() {
                         </div>
                       </div>
                       <div className="flex gap-2 ml-4">
-                        <button
+                        <Button
+                          variant="primary"
+                          size="sm"
                           onClick={() => handleApprove(signup.id)}
                           disabled={actionLoading === signup.id}
-                          className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50"
+                          className="bg-green-600 hover:bg-green-700"
                         >
                           {actionLoading === signup.id ? "..." : "Approve"}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
                           onClick={() => setDeclineModal({ id: signup.id, name: signup.organization_name })}
                           disabled={actionLoading === signup.id}
-                          className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 disabled:opacity-50"
                         >
                           Decline
-                        </button>
+                        </Button>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
             )}
-          </div>
-        )}
+          </TabContent>
 
-        {/* All Tenants Tab */}
-        {activeTab === "tenants" && (
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Registered Tenants</h3>
-            </div>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Slug</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {loadingData ? (
-                  <tr><td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">Loading...</td></tr>
-                ) : organizations.length === 0 ? (
-                  <tr><td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">No tenants yet</td></tr>
-                ) : (
-                  organizations.map((org) => (
-                    <tr key={org.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{org.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{org.slug}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{org.email}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          org.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                        }`}>
-                          {org.is_active ? "Active" : "Suspended"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {org.is_active ? (
-                          <button
-                            onClick={() => handleSuspend(org.id)}
-                            disabled={actionLoading === org.id}
-                            className="text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
-                          >
-                            {actionLoading === org.id ? "..." : "Suspend"}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleActivate(org.id)}
-                            disabled={actionLoading === org.id}
-                            className="text-green-600 hover:text-green-800 font-medium disabled:opacity-50"
-                          >
-                            {actionLoading === org.id ? "..." : "Activate"}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+          {/* All Tenants Tab */}
+          <TabContent value="tenants">
+            <Card className="overflow-hidden">
+              <CardHeader>
+                <h3 className="text-lg font-medium text-gray-900">Registered Tenants</h3>
+              </CardHeader>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Slug</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingData ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : organizations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">
+                        No tenants yet
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    organizations.map((org) => (
+                      <TableRow key={org.id}>
+                        <TableCell className="font-medium text-gray-900">{org.name}</TableCell>
+                        <TableCell>{org.slug}</TableCell>
+                        <TableCell>{org.email}</TableCell>
+                        <TableCell>
+                          <Badge variant={org.is_active ? "success" : "danger"}>
+                            {org.is_active ? "Active" : "Suspended"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {org.is_active ? (
+                            <button
+                              onClick={() => handleSuspend(org.id)}
+                              disabled={actionLoading === org.id}
+                              className="text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+                            >
+                              {actionLoading === org.id ? "..." : "Suspend"}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleActivate(org.id)}
+                              disabled={actionLoading === org.id}
+                              className="text-green-600 hover:text-green-800 font-medium disabled:opacity-50"
+                            >
+                              {actionLoading === org.id ? "..." : "Activate"}
+                            </button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
+          </TabContent>
+        </Tabs>
       </main>
 
       {/* Decline Modal */}
-      {declineModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Decline {declineModal.name}
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Please provide a reason for declining this registration.
-            </p>
-            <textarea
-              value={declineReason}
-              onChange={(e) => setDeclineReason(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Reason for declining..."
-            />
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => { setDeclineModal(null); setDeclineReason(""); }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDecline}
-                disabled={!declineReason.trim() || actionLoading === declineModal.id}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
-              >
-                {actionLoading === declineModal.id ? "..." : "Decline"}
-              </button>
-            </div>
-          </div>
+      <Modal
+        isOpen={!!declineModal}
+        onClose={() => {
+          setDeclineModal(null);
+          setDeclineReason("");
+        }}
+        title={`Decline ${declineModal?.name ?? ""}`}
+      >
+        <p className="text-sm text-gray-600 mb-4">
+          Please provide a reason for declining this registration.
+        </p>
+        <Textarea
+          value={declineReason}
+          onChange={(e) => setDeclineReason(e.target.value)}
+          rows={3}
+          placeholder="Reason for declining..."
+        />
+        <div className="flex justify-end gap-3 mt-4">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setDeclineModal(null);
+              setDeclineReason("");
+            }}
+            disabled={actionLoading === declineModal?.id}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleDecline}
+            disabled={!declineReason.trim() || actionLoading === declineModal?.id}
+          >
+            {actionLoading === declineModal?.id ? "..." : "Decline"}
+          </Button>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

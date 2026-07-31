@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { LoadingScreen } from "@/components/ui";
 
 export default function AdminTenantsPage() {
   const { loading, isAuthenticated, isSuperAdmin } = useAuth();
@@ -21,9 +22,5 @@ export default function AdminTenantsPage() {
     }
   }, [loading, isAuthenticated, isSuperAdmin, router]);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-gray-500">Redirecting to Super Admin Portal...</div>
-    </div>
-  );
+  return <LoadingScreen message="Redirecting to Super Admin Portal..." />;
 }
