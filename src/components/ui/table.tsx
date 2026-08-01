@@ -50,13 +50,17 @@ export function TableBody({ children, className = '' }: TableBodyProps) {
   );
 }
 
-interface TableRowProps {
+interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
   children: React.ReactNode;
   className?: string;
 }
 
-export function TableRow({ children, className = '' }: TableRowProps) {
-  return <tr className={className}>{children}</tr>;
+export function TableRow({ children, className = '', ...props }: TableRowProps) {
+  return (
+    <tr className={className} {...props}>
+      {children}
+    </tr>
+  );
 }
 
 interface TableHeadProps {

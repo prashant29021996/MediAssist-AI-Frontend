@@ -294,5 +294,266 @@ export const tenantApi = {
     }),
 };
 
+// Doctor types
+export interface Doctor {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  department_id?: string;
+  specialization: string;
+  qualification: string;
+  registration_number: string;
+  years_of_experience: number;
+  consultation_fee: number;
+  languages: string;
+  biography: string;
+  status: string;
+  is_available?: boolean;
+  created_at: string;
+}
+
+// Doctors API
+export const doctorsApi = {
+  list: () =>
+    request<{ data: Doctor[] }>("/doctors"),
+
+  getById: (id: string) =>
+    request<{ data: Doctor }>(`/doctors/${id}`),
+
+  create: (data: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string;
+    temporary_password: string;
+    registration_number: string;
+    department_id: string;
+    qualification: string;
+    specialization: string;
+    years_of_experience: number;
+    consultation_fee: number;
+    languages?: string;
+    biography?: string;
+  }) =>
+    request<{ data: Doctor }>("/doctors", { method: "POST", body: data }),
+
+  update: (id: string, data: {
+    first_name?: string;
+    last_name?: string;
+    phone_number?: string;
+    registration_number?: string;
+    department_id?: string;
+    qualification?: string;
+    specialization?: string;
+    years_of_experience?: number;
+    consultation_fee?: number;
+    languages?: string;
+    biography?: string;
+    is_available?: boolean;
+  }) =>
+    request<{ data: Doctor }>(`/doctors/${id}`, { method: "PUT", body: data }),
+
+  delete: (id: string) =>
+    request<{ message: string }>(`/doctors/${id}`, { method: "DELETE" }),
+};
+
+// Receptionists API
+export const receptionistsApi = {
+  list: () =>
+    request<{ data: Array<{
+      id: string;
+      user_id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      role_id: string;
+      is_active: boolean;
+      department: string;
+      created_at: string;
+    }> }>("/receptionists"),
+
+  getById: (id: string) =>
+    request<{ data: {
+      id: string;
+      user_id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      role_id: string;
+      is_active: boolean;
+      department: string;
+      created_at: string;
+    } }>(`/receptionists/${id}`),
+
+  create: (data: {
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    phone?: string;
+    department?: string;
+  }) =>
+    request<{ data: {
+      id: string;
+      user_id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      role_id: string;
+      is_active: boolean;
+      department: string;
+      created_at: string;
+    } }>("/receptionists", { method: "POST", body: data }),
+
+  update: (id: string, data: {
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+    department?: string;
+  }) =>
+    request<{ data: {
+      id: string;
+      user_id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      role_id: string;
+      is_active: boolean;
+      department: string;
+      created_at: string;
+    } }>(`/receptionists/${id}`, { method: "PUT", body: data }),
+
+  delete: (id: string) =>
+    request<{ message: string }>(`/receptionists/${id}`, { method: "DELETE" }),
+};
+
+// Patients API
+export const patientsApi = {
+  list: () =>
+    request<{ data: Array<{
+      id: string;
+      user_id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      role_id: string;
+      is_active: boolean;
+      date_of_birth?: string;
+      blood_group: string;
+      gender: string;
+      emergency_contact_name: string;
+      emergency_contact_phone: string;
+      allergies: string;
+      chronic_conditions: string;
+      insurance_provider: string;
+      insurance_id: string;
+      created_at: string;
+    }> }>("/patients"),
+
+  getById: (id: string) =>
+    request<{ data: {
+      id: string;
+      user_id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      role_id: string;
+      is_active: boolean;
+      date_of_birth?: string;
+      blood_group: string;
+      gender: string;
+      emergency_contact_name: string;
+      emergency_contact_phone: string;
+      allergies: string;
+      chronic_conditions: string;
+      insurance_provider: string;
+      insurance_id: string;
+      created_at: string;
+    } }>(`/patients/${id}`),
+
+  create: (data: {
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    phone?: string;
+    date_of_birth?: string;
+    blood_group?: string;
+    gender?: string;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+    allergies?: string;
+    chronic_conditions?: string;
+    insurance_provider?: string;
+    insurance_id?: string;
+  }) =>
+    request<{ data: {
+      id: string;
+      user_id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      role_id: string;
+      is_active: boolean;
+      date_of_birth?: string;
+      blood_group: string;
+      gender: string;
+      emergency_contact_name: string;
+      emergency_contact_phone: string;
+      allergies: string;
+      chronic_conditions: string;
+      insurance_provider: string;
+      insurance_id: string;
+      created_at: string;
+    } }>("/patients", { method: "POST", body: data }),
+
+  update: (id: string, data: {
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+    date_of_birth?: string;
+    blood_group?: string;
+    gender?: string;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+    allergies?: string;
+    chronic_conditions?: string;
+    insurance_provider?: string;
+    insurance_id?: string;
+  }) =>
+    request<{ data: {
+      id: string;
+      user_id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      role_id: string;
+      is_active: boolean;
+      date_of_birth?: string;
+      blood_group: string;
+      gender: string;
+      emergency_contact_name: string;
+      emergency_contact_phone: string;
+      allergies: string;
+      chronic_conditions: string;
+      insurance_provider: string;
+      insurance_id: string;
+      created_at: string;
+    } }>(`/patients/${id}`, { method: "PUT", body: data }),
+
+  delete: (id: string) =>
+    request<{ message: string }>(`/patients/${id}`, { method: "DELETE" }),
+};
+
 export { setTokens, clearTokens, getAccessToken };
 export type { ApiError };
