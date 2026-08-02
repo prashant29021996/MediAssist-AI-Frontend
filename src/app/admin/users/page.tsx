@@ -1,30 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { usersApi } from "@/lib/api";
+import { usersApi, ListParams } from "@/lib/api";
 import { UserMenu } from "@/components/user-menu";
 import {
   Badge,
   Button,
-  Card,
-  CardBody,
-  CardHeader,
-  EmptyState,
   Input,
   LoadingScreen,
   Modal,
   PageHeader,
   Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from "@/components/ui";
 import { DropdownItem } from "@/components/ui/dropdown";
+import { ListLayout } from "@/components/ListLayout";
+import { Column } from "@/components/DataTable";
 
 interface User {
   id: string;
@@ -49,6 +41,7 @@ export default function UsersPage() {
   const { user, loading, isAuthenticated, hasPermission } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -74,21 +67,22 @@ export default function UsersPage() {
     }
   }, [loading, isAuthenticated, hasPermission, router]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async (params?: ListParams) => {
     setLoadingData(true);
     try {
       const [usersRes, rolesRes] = await Promise.all([
-        usersApi.list(),
+        usersApi.list(params),
         usersApi.listRoles(),
       ]);
       setUsers(usersRes.data);
+      setTotalUsers(usersRes.total);
       setRoles(rolesRes.data);
     } catch (err) {
       console.error("Failed to load data:", err);
     } finally {
       setLoadingData(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated && hasPermission("user.create")) {
@@ -133,7 +127,7 @@ export default function UsersPage() {
         role_id: "",
       });
       setErrors({});
-      loadData();
+      loadData({ page: 1, page_size: 10 });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } } };
       alert(error.response?.data?.error || "Failed to create user");
@@ -147,7 +141,7 @@ export default function UsersPage() {
 
     try {
       await usersApi.toggleActive(id);
-      loadData();
+      loadData({ page: 1, page_size: 10 });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } } };
       alert(error.response?.data?.error || "Failed to update user");
@@ -157,6 +151,58 @@ export default function UsersPage() {
   if (loading) {
     return <LoadingScreen />;
   }
+
+  const columns: Column<User>[] = [
+    {
+      header: "Name",
+      accessor: (item) => (
+        <span className="font-medium text-gray-900">
+          {item.first_name} {item.last_name}
+        </span>
+      ),
+    },
+    { header: "Email", accessor: "email" },
+    { header: "Phone", accessor: (item) => item.phone || "-" },
+    {
+      header: "Status",
+      accessor: (item) => (
+        <Badge variant={item.is_active ? "success" : "danger"}>
+          {item.is_active ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      header: "Password",
+      accessor: (item) =>
+        item.must_change_password ? (
+          <Badge variant="warning">Must Change</Badge>
+        ) : (
+          <Badge variant="gray">Set</Badge>
+        ),
+    },
+    {
+      header: "Actions",
+      accessor: (item) => (
+        <button
+          onClick={() => handleToggleActive(item.id)}
+          className={
+            item.is_active
+              ? "text-red-600 hover:text-red-800"
+              : "text-green-600 hover:text-green-800"
+          }
+        >
+          {item.is_active ? "Deactivate" : "Activate"}
+        </button>
+      ),
+    },
+  ];
+
+  const handleFetch = useCallback(
+    (params: { page: number; page_size: number; search: string }) => {
+      loadData(params);
+    },
+    [loadData]
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -180,161 +226,106 @@ export default function UsersPage() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-medium text-gray-900">Staff Members</h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Manage doctors, receptionists, and other staff
-                </p>
+        <ListLayout
+          cardTitle="Staff Members"
+          cardDescription="Manage doctors, receptionists, and other staff"
+          data={users}
+          total={totalUsers}
+          columns={columns}
+          loading={loadingData}
+          loadingMessage="Loading users..."
+          emptyIcon="👥"
+          emptyTitle="No Users Yet"
+          emptyDescription="Get started by adding your first staff member."
+          recordLabel="user"
+          actionLabel="Add User"
+          onAction={() => setShowModal(true)}
+          showPageHeader={false}
+          searchPlaceholder="Search users..."
+          serverSide
+          onFetch={handleFetch}
+        >
+          <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add New User">
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    label="First Name"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    error={errors.first_name}
+                    placeholder="John"
+                  />
+                  <Input
+                    label="Last Name"
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    error={errors.last_name}
+                    placeholder="Doe"
+                  />
+                </div>
+
+                <Input
+                  label="Email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  error={errors.email}
+                  placeholder="john.doe@clinic.com"
+                />
+
+                <Input
+                  label="Phone Number"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="+1 (555) 123-4567"
+                />
+
+                <Input
+                  label="Temporary Password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  error={errors.password}
+                  placeholder="Min. 8 characters"
+                />
+
+                <Select
+                  label="Role"
+                  value={formData.role_id}
+                  onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
+                  error={errors.role_id}
+                  options={[
+                    { value: "", label: "Select a role..." },
+                    ...roles.map((r) => ({ value: r.id, label: r.name })),
+                  ]}
+                />
+
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note:</strong> The user will be required to change their password on first login.
+                  </p>
+                </div>
               </div>
-              <Button onClick={() => setShowModal(true)}>
-                Add User
-              </Button>
-            </div>
-          </CardHeader>
-          <CardBody>
-            {loadingData ? (
-              <div className="text-center py-12 text-gray-500">Loading users...</div>
-            ) : users.length === 0 ? (
-              <EmptyState
-                icon="👥"
-                title="No Users Yet"
-                description="Get started by adding your first staff member."
-              />
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Password</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((u) => (
-                    <TableRow key={u.id}>
-                      <TableCell className="font-medium text-gray-900">
-                        {u.first_name} {u.last_name}
-                      </TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell>{u.phone || "-"}</TableCell>
-                      <TableCell>
-                        <Badge variant={u.is_active ? "success" : "danger"}>
-                          {u.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {u.must_change_password ? (
-                          <Badge variant="warning">Must Change</Badge>
-                        ) : (
-                          <Badge variant="gray">Set</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <button
-                          onClick={() => handleToggleActive(u.id)}
-                          className={
-                            u.is_active
-                              ? "text-red-600 hover:text-red-800"
-                              : "text-green-600 hover:text-green-800"
-                          }
-                        >
-                          {u.is_active ? "Deactivate" : "Activate"}
-                        </button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardBody>
-        </Card>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowModal(false)}
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" loading={submitting}>
+                  {submitting ? "Creating..." : "Create User"}
+                </Button>
+              </div>
+            </form>
+          </Modal>
+        </ListLayout>
       </main>
-
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add New User">
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="First Name"
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                error={errors.first_name}
-                placeholder="John"
-              />
-              <Input
-                label="Last Name"
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                error={errors.last_name}
-                placeholder="Doe"
-              />
-            </div>
-
-            <Input
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              error={errors.email}
-              placeholder="john.doe@clinic.com"
-            />
-
-            <Input
-              label="Phone Number"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="+1 (555) 123-4567"
-            />
-
-            <Input
-              label="Temporary Password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              error={errors.password}
-              placeholder="Min. 8 characters"
-            />
-
-            <Select
-              label="Role"
-              value={formData.role_id}
-              onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
-              error={errors.role_id}
-              options={[
-                { value: "", label: "Select a role..." },
-                ...roles.map((r) => ({ value: r.id, label: r.name })),
-              ]}
-            />
-
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-              <p className="text-sm text-blue-800">
-                <strong>Note:</strong> The user will be required to change their password on first login.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-6">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setShowModal(false)}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" loading={submitting}>
-              {submitting ? "Creating..." : "Create User"}
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }

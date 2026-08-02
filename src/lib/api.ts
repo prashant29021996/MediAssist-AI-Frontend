@@ -7,6 +7,20 @@ interface RequestOptions {
   authenticated?: boolean;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface ListParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+}
+
 class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -156,7 +170,10 @@ export const authApi = {
 
 // Organizations API
 export const organizationsApi = {
-  list: () => request<{ data: Array<{ id: string; name: string; slug: string; email: string; is_active: boolean }> }>("/organizations"),
+  list: (params?: ListParams) =>
+    request<PaginatedResponse<{ id: string; name: string; slug: string; email: string; is_active: boolean }>>(
+      `/organizations${buildQuery(params)}`
+    ),
 
   getById: (id: string) =>
     request<{ data: { id: string; name: string; slug: string; email: string; is_active: boolean } }>(
@@ -178,8 +195,8 @@ export const organizationsApi = {
 
 // Users API
 export const usersApi = {
-  list: () =>
-    request<{ data: Array<{
+  list: (params?: ListParams) =>
+    request<PaginatedResponse<{
       id: string;
       email: string;
       first_name: string;
@@ -190,7 +207,7 @@ export const usersApi = {
       is_active: boolean;
       must_change_password: boolean;
       created_at: string;
-    }> }>("/users"),
+    }>>(`/users${buildQuery(params)}`),
 
   listRoles: () =>
     request<{ data: Array<{ id: string; name: string; slug: string }> }>("/users/roles"),
@@ -316,8 +333,8 @@ export interface Doctor {
 
 // Doctors API
 export const doctorsApi = {
-  list: () =>
-    request<{ data: Doctor[] }>("/doctors"),
+  list: (params?: ListParams) =>
+    request<PaginatedResponse<Doctor>>(`/doctors${buildQuery(params)}`),
 
   getById: (id: string) =>
     request<{ data: Doctor }>(`/doctors/${id}`),
@@ -359,21 +376,83 @@ export const doctorsApi = {
     request<{ message: string }>(`/doctors/${id}`, { method: "DELETE" }),
 };
 
+// Department types
+export interface Department {
+  id: string;
+  name: string;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+// Receptionist types
+export interface Receptionist {
+  id: string;
+  user_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  role_id: string;
+  is_active: boolean;
+  department: string;
+  created_at: string;
+}
+
+// Patient types
+export interface Patient {
+  id: string;
+  user_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  role_id: string;
+  is_active: boolean;
+  date_of_birth?: string;
+  blood_group: string;
+  gender: string;
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  allergies: string;
+  chronic_conditions: string;
+  insurance_provider: string;
+  insurance_id: string;
+  created_at: string;
+}
+
+// Departments API
+export const departmentsApi = {
+  list: () =>
+    request<{ data: Department[] }>("/departments"),
+
+  listAll: (params?: ListParams) =>
+    request<PaginatedResponse<Department>>(`/departments/all${buildQuery(params)}`),
+
+  getById: (id: string) =>
+    request<{ data: Department }>(`/departments/${id}`),
+
+  create: (data: {
+    name: string;
+    description?: string;
+  }) =>
+    request<{ data: Department }>("/departments", { method: "POST", body: data }),
+
+  update: (id: string, data: {
+    name?: string;
+    description?: string;
+    is_active?: boolean;
+  }) =>
+    request<{ data: Department }>(`/departments/${id}`, { method: "PUT", body: data }),
+
+  delete: (id: string) =>
+    request<{ message: string }>(`/departments/${id}`, { method: "DELETE" }),
+};
+
 // Receptionists API
 export const receptionistsApi = {
-  list: () =>
-    request<{ data: Array<{
-      id: string;
-      user_id: string;
-      email: string;
-      first_name: string;
-      last_name: string;
-      phone: string;
-      role_id: string;
-      is_active: boolean;
-      department: string;
-      created_at: string;
-    }> }>("/receptionists"),
+  list: (params?: ListParams) =>
+    request<PaginatedResponse<Receptionist>>(`/receptionists${buildQuery(params)}`),
 
   getById: (id: string) =>
     request<{ data: {
@@ -435,27 +514,8 @@ export const receptionistsApi = {
 
 // Patients API
 export const patientsApi = {
-  list: () =>
-    request<{ data: Array<{
-      id: string;
-      user_id: string;
-      email: string;
-      first_name: string;
-      last_name: string;
-      phone: string;
-      role_id: string;
-      is_active: boolean;
-      date_of_birth?: string;
-      blood_group: string;
-      gender: string;
-      emergency_contact_name: string;
-      emergency_contact_phone: string;
-      allergies: string;
-      chronic_conditions: string;
-      insurance_provider: string;
-      insurance_id: string;
-      created_at: string;
-    }> }>("/patients"),
+  list: (params?: ListParams) =>
+    request<PaginatedResponse<Patient>>(`/patients${buildQuery(params)}`),
 
   getById: (id: string) =>
     request<{ data: {
@@ -557,3 +617,13 @@ export const patientsApi = {
 
 export { setTokens, clearTokens, getAccessToken };
 export type { ApiError };
+
+function buildQuery(params?: ListParams): string {
+  if (!params) return "";
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.page_size) query.set("page_size", String(params.page_size));
+  if (params.search) query.set("search", params.search);
+  const queryString = query.toString();
+  return queryString ? `?${queryString}` : "";
+}

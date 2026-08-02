@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { organizationsApi, tenantApi } from "@/lib/api";
+import { organizationsApi, tenantApi, ListParams } from "@/lib/api";
 import { UserMenu } from "@/components/user-menu";
 import {
   Badge,
@@ -17,18 +17,13 @@ import {
   Modal,
   PageHeader,
   StatCard,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   Tabs,
   TabContent,
   TabList,
   TabTrigger,
   Textarea,
 } from "@/components/ui";
+import { DataTable, Column } from "@/components/DataTable";
 
 interface Organization {
   id: string;
@@ -53,27 +48,29 @@ export default function SuperAdminDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"overview" | "signups" | "tenants">("overview");
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [totalOrganizations, setTotalOrganizations] = useState(0);
   const [pendingSignups, setPendingSignups] = useState<PendingSignup[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [declineModal, setDeclineModal] = useState<{ id: string; name: string } | null>(null);
   const [declineReason, setDeclineReason] = useState("");
 
-  const loadData = async () => {
+  const loadData = useCallback(async (params?: ListParams) => {
     setLoadingData(true);
     try {
       const [orgsRes, pendingRes] = await Promise.all([
-        organizationsApi.list(),
+        organizationsApi.list(params),
         tenantApi.listPending().catch(() => ({ data: [] })),
       ]);
       setOrganizations(orgsRes.data);
+      setTotalOrganizations(orgsRes.total);
       setPendingSignups(pendingRes.data);
     } catch {
       // silently fail
     } finally {
       setLoadingData(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -123,7 +120,7 @@ export default function SuperAdminDashboard() {
     setActionLoading(id);
     try {
       await organizationsApi.suspend(id);
-      loadData();
+      loadData({ page: 1, page_size: 10 });
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Failed to suspend");
     } finally {
@@ -135,7 +132,7 @@ export default function SuperAdminDashboard() {
     setActionLoading(id);
     try {
       await organizationsApi.activate(id);
-      loadData();
+      loadData({ page: 1, page_size: 10 });
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Failed to activate");
     } finally {
@@ -146,6 +143,46 @@ export default function SuperAdminDashboard() {
   if (loading) {
     return <LoadingScreen />;
   }
+
+  const tenantColumns: Column<Organization>[] = [
+    {
+      header: "Name",
+      accessor: (item) => (
+        <span className="font-medium text-gray-900">{item.name}</span>
+      ),
+    },
+    { header: "Slug", accessor: "slug" },
+    { header: "Email", accessor: "email" },
+    {
+      header: "Status",
+      accessor: (item) => (
+        <Badge variant={item.is_active ? "success" : "danger"}>
+          {item.is_active ? "Active" : "Suspended"}
+        </Badge>
+      ),
+    },
+    {
+      header: "Actions",
+      accessor: (item) =>
+        item.is_active ? (
+          <button
+            onClick={() => handleSuspend(item.id)}
+            disabled={actionLoading === item.id}
+            className="text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+          >
+            {actionLoading === item.id ? "..." : "Suspend"}
+          </button>
+        ) : (
+          <button
+            onClick={() => handleActivate(item.id)}
+            disabled={actionLoading === item.id}
+            className="text-green-600 hover:text-green-800 font-medium disabled:opacity-50"
+          >
+            {actionLoading === item.id ? "..." : "Activate"}
+          </button>
+        ),
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -327,64 +364,20 @@ export default function SuperAdminDashboard() {
               <CardHeader>
                 <h3 className="text-lg font-medium text-gray-900">Registered Tenants</h3>
               </CardHeader>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Slug</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loadingData ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center">
-                        Loading...
-                      </TableCell>
-                    </TableRow>
-                  ) : organizations.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center">
-                        No tenants yet
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    organizations.map((org) => (
-                      <TableRow key={org.id}>
-                        <TableCell className="font-medium text-gray-900">{org.name}</TableCell>
-                        <TableCell>{org.slug}</TableCell>
-                        <TableCell>{org.email}</TableCell>
-                        <TableCell>
-                          <Badge variant={org.is_active ? "success" : "danger"}>
-                            {org.is_active ? "Active" : "Suspended"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {org.is_active ? (
-                            <button
-                              onClick={() => handleSuspend(org.id)}
-                              disabled={actionLoading === org.id}
-                              className="text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
-                            >
-                              {actionLoading === org.id ? "..." : "Suspend"}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleActivate(org.id)}
-                              disabled={actionLoading === org.id}
-                              className="text-green-600 hover:text-green-800 font-medium disabled:opacity-50"
-                            >
-                              {actionLoading === org.id ? "..." : "Activate"}
-                            </button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+              <CardBody>
+                <DataTable
+                  data={organizations}
+                  columns={tenantColumns}
+                  loading={loadingData}
+                  loadingMessage="Loading tenants..."
+                  emptyMessage="No tenants yet"
+                  searchPlaceholder="Search tenants..."
+                  searchable
+                  serverSide
+                  total={totalOrganizations}
+                  onFetch={(params) => loadData(params)}
+                />
+              </CardBody>
             </Card>
           </TabContent>
         </Tabs>

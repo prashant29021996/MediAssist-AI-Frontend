@@ -1,44 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { receptionistsApi } from "@/lib/api";
-import {
-  Badge,
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  EmptyState,
-  Input,
-  Modal,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui";
-
-interface Receptionist {
-  id: string;
-  user_id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  role_id: string;
-  is_active: boolean;
-  department: string;
-  created_at: string;
-}
+import { receptionistsApi, departmentsApi, Department, Receptionist, ListParams } from "@/lib/api";
+import { Badge, Button, Input, Modal, Select } from "@/components/ui";
+import { ListLayout } from "@/components/ListLayout";
+import { Column } from "@/components/DataTable";
 
 export default function ReceptionistsPage() {
   const router = useRouter();
   const [receptionists, setReceptionists] = useState<Receptionist[]>([]);
+  const [totalReceptionists, setTotalReceptionists] = useState(0);
   const [loadingData, setLoadingData] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -51,21 +28,41 @@ export default function ReceptionistsPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const loadReceptionists = async () => {
+  const loadReceptionists = useCallback(async (params?: ListParams) => {
     setLoadingData(true);
     try {
-      const res = await receptionistsApi.list();
+      const res = await receptionistsApi.list(params);
       setReceptionists(res.data);
+      setTotalReceptionists(res.total);
     } catch (err) {
       console.error("Failed to load receptionists:", err);
     } finally {
       setLoadingData(false);
     }
+  }, []);
+
+  const loadDepartments = async () => {
+    setLoadingDepartments(true);
+    try {
+      const res = await departmentsApi.list();
+      setDepartments(res.data);
+    } catch (err) {
+      console.error("Failed to load departments:", err);
+    } finally {
+      setLoadingDepartments(false);
+    }
   };
 
   useEffect(() => {
     loadReceptionists();
-  }, []);
+  }, [loadReceptionists]);
+
+  // Load departments when the create modal is opened
+  useEffect(() => {
+    if (showModal && departments.length === 0) {
+      loadDepartments();
+    }
+  }, [showModal, departments.length]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -110,7 +107,7 @@ export default function ReceptionistsPage() {
         department: "",
       });
       setErrors({});
-      loadReceptionists();
+      loadReceptionists({ page: 1, page_size: 10 });
     } catch (err: unknown) {
       const error = err as { message?: string };
       alert(error.message || "Failed to create receptionist");
@@ -119,164 +116,155 @@ export default function ReceptionistsPage() {
     }
   };
 
+  const columns: Column<Receptionist>[] = [
+    {
+      header: "Name",
+      accessor: (item) => (
+        <span className="font-medium text-gray-900">
+          {item.first_name} {item.last_name}
+        </span>
+      ),
+    },
+    { header: "Email", accessor: "email" },
+    { header: "Phone", accessor: (item) => item.phone || "-" },
+    { header: "Department", accessor: (item) => item.department || "-" },
+    {
+      header: "Status",
+      accessor: (item) => (
+        <Badge variant={item.is_active ? "success" : "danger"}>
+          {item.is_active ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+  ];
+
+  const handleFetch = useCallback(
+    (params: { page: number; page_size: number; search: string }) => {
+      loadReceptionists(params);
+    },
+    [loadReceptionists]
+  );
+
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Receptionists</h2>
-        <p className="mt-1 text-sm text-gray-600">
-          Manage front-desk staff in your clinic
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900">Receptionist List</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                {receptionists.length} receptionist{receptionists.length !== 1 ? "s" : ""} registered
-              </p>
-            </div>
-            <Button onClick={() => setShowModal(true)}>Add Receptionist</Button>
-          </div>
-        </CardHeader>
-        <CardBody>
-          {loadingData ? (
-            <div className="text-center py-12 text-gray-500">Loading receptionists...</div>
-          ) : receptionists.length === 0 ? (
-            <EmptyState
-              icon="💼"
-              title="No Receptionists Yet"
-              description="Get started by adding your first receptionist."
-            />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {receptionists.map((receptionist) => (
-                  <TableRow
-                    key={receptionist.id}
-                    className="cursor-pointer hover:bg-gray-50"
-                    onClick={() =>
-                      router.push(`/dashboard/receptionists/${receptionist.id}`)
-                    }
-                  >
-                    <TableCell className="font-medium text-gray-900">
-                      {receptionist.first_name} {receptionist.last_name}
-                    </TableCell>
-                    <TableCell>{receptionist.email}</TableCell>
-                    <TableCell>{receptionist.phone || "-"}</TableCell>
-                    <TableCell>{receptionist.department || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant={receptionist.is_active ? "success" : "danger"}>
-                        {receptionist.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardBody>
-      </Card>
-
-      {/* Create Receptionist Modal */}
-      <Modal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title="Add New Receptionist"
+    <>
+      <ListLayout
+        title="Receptionists"
+        subtitle="Manage front-desk staff in your clinic"
+        cardTitle="Receptionist List"
+        data={receptionists}
+        total={totalReceptionists}
+        columns={columns}
+        loading={loadingData}
+        loadingMessage="Loading receptionists..."
+        emptyIcon="💼"
+        emptyTitle="No Receptionists Yet"
+        emptyDescription="Get started by adding your first receptionist."
+        recordLabel="receptionist"
+        actionLabel="Add Receptionist"
+        onAction={() => setShowModal(true)}
+        onRowClick={(item) =>
+          router.push(`/dashboard/receptionists/${item.id}`)
+        }
+        searchPlaceholder="Search receptionists..."
+        serverSide
+        onFetch={handleFetch}
       >
-        <form onSubmit={handleCreate}>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+        {/* Create Receptionist Modal */}
+        <Modal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          title="Add New Receptionist"
+        >
+          <form onSubmit={handleCreate}>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="First Name"
+                  value={formData.first_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, first_name: e.target.value })
+                  }
+                  error={errors.first_name}
+                  placeholder="John"
+                />
+                <Input
+                  label="Last Name"
+                  value={formData.last_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, last_name: e.target.value })
+                  }
+                  error={errors.last_name}
+                  placeholder="Doe"
+                />
+              </div>
+
               <Input
-                label="First Name"
-                value={formData.first_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, first_name: e.target.value })
-                }
-                error={errors.first_name}
-                placeholder="John"
+                label="Email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                error={errors.email}
+                placeholder="john.doe@clinic.com"
               />
+
               <Input
-                label="Last Name"
-                value={formData.last_name}
+                label="Temporary Password"
+                type="password"
+                value={formData.password}
                 onChange={(e) =>
-                  setFormData({ ...formData, last_name: e.target.value })
+                  setFormData({ ...formData, password: e.target.value })
                 }
-                error={errors.last_name}
-                placeholder="Doe"
+                error={errors.password}
+                placeholder="Min. 8 characters"
               />
+
+              <Input
+                label="Phone Number"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="+1 (555) 123-4567"
+              />
+
+              <Select
+                label="Department"
+                value={formData.department}
+                onChange={(e) =>
+                  setFormData({ ...formData, department: e.target.value })
+                }
+                options={[
+                  { value: "", label: loadingDepartments ? "Loading..." : "Select a department" },
+                  ...departments.map((dept) => ({
+                    value: dept.name,
+                    label: dept.name,
+                  })),
+                ]}
+              />
+
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> The receptionist will be required to change
+                  their password on first login.
+                </p>
+              </div>
             </div>
 
-            <Input
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              error={errors.email}
-              placeholder="john.doe@clinic.com"
-            />
-
-            <Input
-              label="Temporary Password"
-              type="password"
-              value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
-              error={errors.password}
-              placeholder="Min. 8 characters"
-            />
-
-            <Input
-              label="Phone Number"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="+1 (555) 123-4567"
-            />
-
-            <Input
-              label="Department"
-              value={formData.department}
-              onChange={(e) =>
-                setFormData({ ...formData, department: e.target.value })
-              }
-              placeholder="Front Desk"
-            />
-
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-              <p className="text-sm text-blue-800">
-                <strong>Note:</strong> The receptionist will be required to change
-                their password on first login.
-              </p>
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowModal(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" loading={submitting}>
+                {submitting ? "Creating..." : "Create Receptionist"}
+              </Button>
             </div>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-6">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setShowModal(false)}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" loading={submitting}>
-              {submitting ? "Creating..." : "Create Receptionist"}
-            </Button>
-          </div>
-        </form>
-      </Modal>
-    </div>
+          </form>
+        </Modal>
+      </ListLayout>
+    </>
   );
 }

@@ -3,22 +3,26 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 
 interface NavItem {
   label: string;
   href: string;
   icon: string;
+  permission?: string; // if omitted, visible to all authenticated users
 }
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "🏠" },
-  { label: "Doctors", href: "/dashboard/doctors", icon: "👨‍⚕️" },
-  { label: "Receptionists", href: "/dashboard/receptionists", icon: "💼" },
-  { label: "Patients", href: "/dashboard/patients", icon: "🩺" },
+  { label: "Doctors", href: "/dashboard/doctors", icon: "👨‍⚕️", permission: "doctor.read" },
+  { label: "Departments", href: "/dashboard/departments", icon: "🏥", permission: "department.read" },
+  { label: "Receptionists", href: "/dashboard/receptionists", icon: "💼", permission: "user.create" },
+  { label: "Patients", href: "/dashboard/patients", icon: "🩺", permission: "patient.read" },
 ];
 
 export function Sidenav() {
   const pathname = usePathname();
+  const { hasPermission } = useAuth();
 
   const isActive = (href: string) => {
     if (href === "/dashboard") {
@@ -26,6 +30,11 @@ export function Sidenav() {
     }
     return pathname.startsWith(href);
   };
+
+  // Filter nav items based on user permissions
+  const visibleItems = navItems.filter(
+    (item) => !item.permission || hasPermission(item.permission)
+  );
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
@@ -42,7 +51,7 @@ export function Sidenav() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map((item) => (
+        {visibleItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
