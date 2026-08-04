@@ -40,6 +40,7 @@ export default function PatientsPage() {
     first_name: "",
     last_name: "",
     phone: "",
+    medical_record_number: "",
     date_of_birth: "",
     blood_group: "",
     gender: "",
@@ -101,6 +102,7 @@ export default function PatientsPage() {
         first_name: formData.first_name,
         last_name: formData.last_name,
         phone: formData.phone || undefined,
+        medical_record_number: formData.medical_record_number || undefined,
         date_of_birth: formData.date_of_birth || undefined,
         blood_group: formData.blood_group || undefined,
         gender: formData.gender || undefined,
@@ -118,6 +120,7 @@ export default function PatientsPage() {
         first_name: "",
         last_name: "",
         phone: "",
+        medical_record_number: "",
         date_of_birth: "",
         blood_group: "",
         gender: "",
@@ -158,6 +161,7 @@ export default function PatientsPage() {
     },
     { header: "Email", accessor: "email" },
     { header: "Phone", accessor: (item) => item.phone || "-" },
+    { header: "MRN", accessor: (item) => item.medical_record_number || "-" },
     { header: "Blood Group", accessor: (item) => item.blood_group || "-" },
     {
       header: "Gender",
@@ -260,6 +264,15 @@ export default function PatientsPage() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="+1 (555) 123-4567"
+              />
+
+              <Input
+                label="Medical Record Number (MRN)"
+                value={formData.medical_record_number}
+                onChange={(e) =>
+                  setFormData({ ...formData, medical_record_number: e.target.value })
+                }
+                placeholder="MRN-0001"
               />
 
               <Input

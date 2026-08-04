@@ -18,6 +18,7 @@ const navItems: NavItem[] = [
   { label: "Departments", href: "/dashboard/departments", icon: "🏥", permission: "department.read" },
   { label: "Receptionists", href: "/dashboard/receptionists", icon: "💼", permission: "user.create" },
   { label: "Patients", href: "/dashboard/patients", icon: "🩺", permission: "patient.read" },
+  { label: "Operating Hours", href: "/dashboard/operating-hours", icon: "🕐", permission: "clinic_hours.read" },
 ];
 
 export function Sidenav() {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { tenantApi } from "@/lib/api";
-import { Alert, Button, Input, Textarea } from "@/components/ui";
+import { Alert, Button, Input, Select, Textarea } from "@/components/ui";
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -17,6 +17,8 @@ export default function SignupPage() {
     address: "",
     latitude: 0,
     longitude: 0,
+    timezone: "UTC",
+    currency: "USD",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -58,6 +60,8 @@ export default function SignupPage() {
         address: formData.address || undefined,
         latitude: formData.latitude || undefined,
         longitude: formData.longitude || undefined,
+        timezone: formData.timezone || undefined,
+        currency: formData.currency || undefined,
       });
       setSuccess(true);
     } catch (err: unknown) {
@@ -148,6 +152,46 @@ export default function SignupPage() {
                 value={formData.longitude}
                 onChange={handleChange}
                 placeholder="77.2090"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Timezone"
+                name="timezone"
+                value={formData.timezone}
+                onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+                options={[
+                  { value: "UTC", label: "UTC" },
+                  { value: "Asia/Kolkata", label: "Asia/Kolkata (IST)" },
+                  { value: "America/New_York", label: "America/New_York (EST)" },
+                  { value: "America/Chicago", label: "America/Chicago (CST)" },
+                  { value: "America/Denver", label: "America/Denver (MST)" },
+                  { value: "America/Los_Angeles", label: "America/Los_Angeles (PST)" },
+                  { value: "Europe/London", label: "Europe/London (GMT)" },
+                  { value: "Europe/Paris", label: "Europe/Paris (CET)" },
+                  { value: "Europe/Berlin", label: "Europe/Berlin (CET)" },
+                  { value: "Asia/Dubai", label: "Asia/Dubai (GST)" },
+                  { value: "Asia/Singapore", label: "Asia/Singapore (SGT)" },
+                  { value: "Asia/Tokyo", label: "Asia/Tokyo (JST)" },
+                  { value: "Australia/Sydney", label: "Australia/Sydney (AEST)" },
+                ]}
+              />
+              <Select
+                label="Currency"
+                name="currency"
+                value={formData.currency}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                options={[
+                  { value: "USD", label: "USD ($)" },
+                  { value: "INR", label: "INR (₹)" },
+                  { value: "EUR", label: "EUR (€)" },
+                  { value: "GBP", label: "GBP (£)" },
+                  { value: "AED", label: "AED (د.إ)" },
+                  { value: "SGD", label: "SGD (S$)" },
+                  { value: "JPY", label: "JPY (¥)" },
+                  { value: "AUD", label: "AUD (A$)" },
+                ]}
               />
             </div>
           </div>

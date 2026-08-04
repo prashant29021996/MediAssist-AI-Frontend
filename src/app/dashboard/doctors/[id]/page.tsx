@@ -155,14 +155,28 @@ export default function DoctorDetailsPage() {
             {doctor.is_available && <Badge variant="info">Available</Badge>}
           </div>
         </div>
-        <Button
-          variant="danger"
-          onClick={handleDelete}
-          loading={deleting}
-          disabled={deleting}
-        >
-          {deleting ? "Deleting..." : "Delete Doctor"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => router.push(`/dashboard/doctors/${id}/schedule`)}
+          >
+            🕐 Working Schedule
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => router.push(`/dashboard/doctors/${id}/leaves`)}
+          >
+            🏖️ Leave Management
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleDelete}
+            loading={deleting}
+            disabled={deleting}
+          >
+            {deleting ? "Deleting..." : "Delete Doctor"}
+          </Button>
+        </div>
       </div>
 
       {/* Update Form */}

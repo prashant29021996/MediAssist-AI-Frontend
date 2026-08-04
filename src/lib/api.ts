@@ -171,17 +171,17 @@ export const authApi = {
 // Organizations API
 export const organizationsApi = {
   list: (params?: ListParams) =>
-    request<PaginatedResponse<{ id: string; name: string; slug: string; email: string; is_active: boolean }>>(
+    request<PaginatedResponse<{ id: string; name: string; slug: string; email: string; timezone: string; currency: string; is_active: boolean }>>(
       `/organizations${buildQuery(params)}`
     ),
 
   getById: (id: string) =>
-    request<{ data: { id: string; name: string; slug: string; email: string; is_active: boolean } }>(
+    request<{ data: { id: string; name: string; slug: string; email: string; timezone: string; currency: string; is_active: boolean } }>(
       `/organizations/${id}`
     ),
 
-  create: (data: { name: string; slug: string; email: string; phone?: string }) =>
-    request<{ data: { id: string; name: string; slug: string; email: string; is_active: boolean } }>(
+  create: (data: { name: string; slug: string; email: string; phone?: string; timezone?: string; currency?: string }) =>
+    request<{ data: { id: string; name: string; slug: string; email: string; timezone: string; currency: string; is_active: boolean } }>(
       "/organizations",
       { method: "POST", body: data }
     ),
@@ -263,6 +263,8 @@ export const tenantApi = {
     address?: string;
     latitude?: number;
     longitude?: number;
+    timezone?: string;
+    currency?: string;
   }) =>
     request<{
       data: { id: string; organization_name: string; admin_email: string; status: string; created_at: string };
@@ -280,6 +282,8 @@ export const tenantApi = {
         address: string;
         latitude: number;
         longitude: number;
+        timezone: string;
+        currency: string;
         status: string;
         created_at: string;
       }>;
@@ -409,6 +413,7 @@ export interface Patient {
   phone: string;
   role_id: string;
   is_active: boolean;
+  medical_record_number: string;
   date_of_birth?: string;
   blood_group: string;
   gender: string;
@@ -512,6 +517,99 @@ export const receptionistsApi = {
     request<{ message: string }>(`/receptionists/${id}`, { method: "DELETE" }),
 };
 
+// Scheduling API
+export interface OperatingHourShift {
+  start_time: string;
+  end_time: string;
+}
+
+export interface DaySchedule {
+  day_of_week: string;
+  is_closed: boolean;
+  shifts: OperatingHourShift[];
+}
+
+export interface WeeklySchedule {
+  days: DaySchedule[];
+}
+
+export interface DoctorDaySchedule {
+  day_of_week: number; // 1=Monday, 2=Tuesday, ..., 7=Sunday
+  is_off: boolean;
+  shifts: OperatingHourShift[];
+}
+
+export interface DoctorSchedule {
+  doctor_id: string;
+  days: DoctorDaySchedule[];
+}
+
+export interface DoctorLeave {
+  id: string;
+  doctor_id: string;
+  leave_type: string;
+  status: string;
+  start_datetime: string;
+  end_datetime: string;
+  reason: string;
+  created_at: string;
+  updated_at: string;
+  cancelled_at?: string;
+  cancelled_by?: string;
+}
+
+export const schedulingApi = {
+  getOperatingHours: () =>
+    request<{ data: WeeklySchedule }>("/clinic-hours"),
+
+  replaceOperatingHours: (data: WeeklySchedule) =>
+    request<{ data: WeeklySchedule }>("/clinic-hours", { method: "PUT", body: data }),
+
+  getDoctorSchedule: (doctorId: string) =>
+    request<{ data: DoctorSchedule }>(`/doctors/${doctorId}/schedule`),
+
+  replaceDoctorSchedule: (doctorId: string, data: { days: DoctorDaySchedule[] }) =>
+    request<{ data: DoctorSchedule }>(`/doctors/${doctorId}/schedule`, { method: "PUT", body: data }),
+
+  // Doctor Leave
+  listLeaves: (params?: { doctor_id?: string; page?: number; page_size?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.doctor_id) query.set("doctor_id", params.doctor_id);
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.page_size) query.set("page_size", String(params.page_size));
+    const qs = query.toString();
+    return request<{ data: DoctorLeave[]; total: number; page: number; page_size: number }>(
+      `/doctor-leaves${qs ? `?${qs}` : ""}`
+    );
+  },
+
+  getLeave: (id: string) =>
+    request<{ data: DoctorLeave }>(`/doctor-leaves/${id}`),
+
+  createLeave: (data: {
+    doctor_id: string;
+    start_datetime: string;
+    end_datetime: string;
+    leave_type: string;
+    reason?: string;
+  }) =>
+    request<{ data: DoctorLeave; warning?: { appointments_affected: number } }>(
+      "/doctor-leaves",
+      { method: "POST", body: data }
+    ),
+
+  updateLeave: (id: string, data: {
+    start_datetime?: string;
+    end_datetime?: string;
+    leave_type?: string;
+    reason?: string;
+  }) =>
+    request<{ data: DoctorLeave }>(`/doctor-leaves/${id}`, { method: "PUT", body: data }),
+
+  cancelLeave: (id: string) =>
+    request<{ data: DoctorLeave }>(`/doctor-leaves/${id}/cancel`, { method: "POST" }),
+};
+
 // Patients API
 export const patientsApi = {
   list: (params?: ListParams) =>
@@ -527,6 +625,7 @@ export const patientsApi = {
       phone: string;
       role_id: string;
       is_active: boolean;
+      medical_record_number: string;
       date_of_birth?: string;
       blood_group: string;
       gender: string;
@@ -545,6 +644,7 @@ export const patientsApi = {
     first_name: string;
     last_name: string;
     phone?: string;
+    medical_record_number?: string;
     date_of_birth?: string;
     blood_group?: string;
     gender?: string;
@@ -564,6 +664,7 @@ export const patientsApi = {
       phone: string;
       role_id: string;
       is_active: boolean;
+      medical_record_number: string;
       date_of_birth?: string;
       blood_group: string;
       gender: string;
@@ -580,6 +681,7 @@ export const patientsApi = {
     first_name?: string;
     last_name?: string;
     phone?: string;
+    medical_record_number?: string;
     date_of_birth?: string;
     blood_group?: string;
     gender?: string;
@@ -599,6 +701,7 @@ export const patientsApi = {
       phone: string;
       role_id: string;
       is_active: boolean;
+      medical_record_number: string;
       date_of_birth?: string;
       blood_group: string;
       gender: string;

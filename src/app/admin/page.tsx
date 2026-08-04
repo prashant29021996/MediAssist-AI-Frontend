@@ -39,6 +39,8 @@ interface PendingSignup {
   admin_email: string;
   admin_first_name: string;
   admin_last_name: string;
+  timezone: string;
+  currency: string;
   status: string;
   created_at: string;
 }
@@ -325,6 +327,12 @@ export default function SuperAdminDashboard() {
                           </div>
                           <div>
                             <span className="font-medium">Email:</span> {signup.admin_email}
+                          </div>
+                          <div>
+                            <span className="font-medium">Timezone:</span> {signup.timezone || "UTC"}
+                          </div>
+                          <div>
+                            <span className="font-medium">Currency:</span> {signup.currency || "USD"}
                           </div>
                           <div>
                             <span className="font-medium">Submitted:</span>{" "}

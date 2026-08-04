@@ -23,6 +23,7 @@ interface Patient {
   phone: string;
   role_id: string;
   is_active: boolean;
+  medical_record_number: string;
   date_of_birth?: string;
   blood_group: string;
   gender: string;
@@ -68,6 +69,7 @@ export default function PatientDetailsPage() {
     first_name: "",
     last_name: "",
     phone: "",
+    medical_record_number: "",
     date_of_birth: "",
     blood_group: "",
     gender: "",
@@ -101,6 +103,7 @@ export default function PatientDetailsPage() {
           first_name: p.first_name || "",
           last_name: p.last_name || "",
           phone: p.phone || "",
+          medical_record_number: p.medical_record_number || "",
           date_of_birth: dob,
           blood_group: p.blood_group || "",
           gender: p.gender || "",
@@ -131,6 +134,7 @@ export default function PatientDetailsPage() {
         first_name: formData.first_name,
         last_name: formData.last_name,
         phone: formData.phone,
+        medical_record_number: formData.medical_record_number || undefined,
         date_of_birth: formData.date_of_birth || undefined,
         blood_group: formData.blood_group || undefined,
         gender: formData.gender || undefined,
@@ -265,6 +269,16 @@ export default function PatientDetailsPage() {
                     }
                     placeholder="+1 (555) 123-4567"
                   />
+                  <Input
+                    label="Medical Record Number (MRN)"
+                    value={formData.medical_record_number}
+                    onChange={(e) =>
+                      setFormData({ ...formData, medical_record_number: e.target.value })
+                    }
+                    placeholder="MRN-0001"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-4">
                   <Input
                     label="Date of Birth"
                     type="date"
