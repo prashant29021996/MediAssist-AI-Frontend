@@ -159,6 +159,9 @@ export const authApi = {
         role_name?: string;
         tenant_id?: string;
         permissions?: string[];
+        profile_id?: string;
+        doctor_profile_id?: string;
+        receptionist_profile_id?: string;
       };
     }>("/auth/me"),
 

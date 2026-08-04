@@ -163,12 +163,6 @@ export default function DoctorDetailsPage() {
             🕐 Working Schedule
           </Button>
           <Button
-            variant="secondary"
-            onClick={() => router.push(`/dashboard/doctors/${id}/leaves`)}
-          >
-            🏖️ Leave Management
-          </Button>
-          <Button
             variant="danger"
             onClick={handleDelete}
             loading={deleting}

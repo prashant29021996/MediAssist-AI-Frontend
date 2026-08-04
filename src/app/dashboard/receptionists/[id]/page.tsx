@@ -165,23 +165,6 @@ export default function ReceptionistDetailsPage() {
         </Button>
       </div>
 
-      {/* Leave Management Link */}
-      <Card className="mt-6">
-        <CardHeader>
-          <h3 className="text-lg font-medium text-gray-900">Leave Management</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            View and manage leave records for this receptionist
-          </p>
-        </CardHeader>
-        <CardBody>
-          <Link href={`/dashboard/receptionists/${id}/leaves`}>
-            <Button variant="secondary" className="w-full">
-              Manage Leaves
-            </Button>
-          </Link>
-        </CardBody>
-      </Card>
-
       {canEdit && (
         <>
           {/* Update Form */}

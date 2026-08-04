@@ -16,6 +16,9 @@ interface UserProfile {
   role_name: string;
   tenant_id: string;
   permissions: string[];
+  profile_id?: string;
+  doctor_profile_id?: string;
+  receptionist_profile_id?: string;
 }
 
 export default function ProfilePage() {
@@ -61,6 +64,7 @@ export default function ProfilePage() {
 
   const isDoctor = profile.role_name === "Doctor";
   const isReceptionist = profile.role_name === "Receptionist";
+  const profileId = profile.doctor_profile_id || profile.receptionist_profile_id || profile.profile_id || profile.user_id;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -126,14 +130,14 @@ export default function ProfilePage() {
         <CardBody>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(isDoctor || isReceptionist) && (
-              <Link href={`/dashboard/${isDoctor ? "doctors" : "receptionists"}/${profile.user_id}/leaves`}>
+              <Link href={`/dashboard/${isDoctor ? "doctors" : "receptionists"}/${profileId}/leaves`}>
                 <Button variant="secondary" className="w-full">
                   🏖️ Manage My Leaves
                 </Button>
               </Link>
             )}
             {isDoctor && (
-              <Link href={`/dashboard/doctors/${profile.user_id}/schedule`}>
+              <Link href={`/dashboard/doctors/${profileId}/schedule`}>
                 <Button variant="secondary" className="w-full">
                   🕐 View My Schedule
                 </Button>
