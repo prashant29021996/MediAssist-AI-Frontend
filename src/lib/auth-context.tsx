@@ -9,6 +9,7 @@ interface User {
   first_name?: string;
   last_name?: string;
   role_id?: string;
+  role_name?: string;
   tenant_id?: string;
   permissions?: string[];
 }
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: response.data.user_id,
         email: response.data.email,
         role_id: response.data.role_id,
+        role_name: response.data.role_name,
         tenant_id: response.data.tenant_id,
         permissions: response.data.permissions || [],
       });

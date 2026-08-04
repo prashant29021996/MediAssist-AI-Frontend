@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import { receptionistsApi } from "@/lib/api";
 import {
   Badge,
@@ -11,6 +12,7 @@ import {
   CardHeader,
   Input,
 } from "@/components/ui";
+import { useAuth } from "@/lib/auth-context";
 
 interface Receptionist {
   id: string;
@@ -29,11 +31,15 @@ export default function ReceptionistDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+  const { hasPermission } = useAuth();
 
   const [receptionist, setReceptionist] = useState<Receptionist | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  // Only clinic admin can update/delete receptionists
+  const canEdit = hasPermission("user.update");
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -159,14 +165,33 @@ export default function ReceptionistDetailsPage() {
         </Button>
       </div>
 
-      {/* Update Form */}
-      <Card>
+      {/* Leave Management Link */}
+      <Card className="mt-6">
         <CardHeader>
-          <h3 className="text-lg font-medium text-gray-900">Edit Receptionist</h3>
+          <h3 className="text-lg font-medium text-gray-900">Leave Management</h3>
           <p className="text-sm text-gray-500 mt-1">
-            Update receptionist information
+            View and manage leave records for this receptionist
           </p>
         </CardHeader>
+        <CardBody>
+          <Link href={`/dashboard/receptionists/${id}/leaves`}>
+            <Button variant="secondary" className="w-full">
+              Manage Leaves
+            </Button>
+          </Link>
+        </CardBody>
+      </Card>
+
+      {canEdit && (
+        <>
+          {/* Update Form */}
+          <Card className="mt-6">
+            <CardHeader>
+              <h3 className="text-lg font-medium text-gray-900">Edit Receptionist</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Update receptionist information
+              </p>
+            </CardHeader>
         <CardBody>
           <form onSubmit={handleUpdate}>
             <div className="space-y-4">
@@ -223,6 +248,21 @@ export default function ReceptionistDetailsPage() {
           </form>
         </CardBody>
       </Card>
+
+      {/* Delete Button - Only for Clinic Admin */}
+      <div className="mt-6">
+        <Button
+          variant="danger"
+          onClick={handleDelete}
+          loading={deleting}
+          disabled={deleting}
+          className="w-full"
+        >
+          {deleting ? "Deleting..." : "Delete Receptionist"}
+        </Button>
+      </div>
+    </>
+      )}
     </div>
   );
 }

@@ -6,9 +6,11 @@ import { receptionistsApi, departmentsApi, Department, Receptionist, ListParams 
 import { Badge, Button, Input, Modal, Select } from "@/components/ui";
 import { ListLayout } from "@/components/ListLayout";
 import { Column } from "@/components/DataTable";
+import { useAuth } from "@/lib/auth-context";
 
 export default function ReceptionistsPage() {
   const router = useRouter();
+  const { hasPermission } = useAuth();
   const [receptionists, setReceptionists] = useState<Receptionist[]>([]);
   const [totalReceptionists, setTotalReceptionists] = useState(0);
   const [loadingData, setLoadingData] = useState(true);
@@ -16,6 +18,9 @@ export default function ReceptionistsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loadingDepartments, setLoadingDepartments] = useState(false);
+  
+  // Only clinic admin can create receptionists
+  const canCreate = hasPermission("user.create");
 
   const [formData, setFormData] = useState({
     email: "",
@@ -161,7 +166,7 @@ export default function ReceptionistsPage() {
         emptyDescription="Get started by adding your first receptionist."
         recordLabel="receptionist"
         actionLabel="Add Receptionist"
-        onAction={() => setShowModal(true)}
+        onAction={canCreate ? () => setShowModal(true) : undefined}
         onRowClick={(item) =>
           router.push(`/dashboard/receptionists/${item.id}`)
         }

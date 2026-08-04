@@ -14,11 +14,13 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "🏠" },
+  { label: "My Profile", href: "/dashboard/profile", icon: "👤" },
   { label: "Doctors", href: "/dashboard/doctors", icon: "👨‍⚕️", permission: "doctor.read" },
   { label: "Departments", href: "/dashboard/departments", icon: "🏥", permission: "department.read" },
-  { label: "Receptionists", href: "/dashboard/receptionists", icon: "💼", permission: "user.create" },
+  { label: "Receptionists", href: "/dashboard/receptionists", icon: "💼", permission: "receptionist.read" },
   { label: "Patients", href: "/dashboard/patients", icon: "🩺", permission: "patient.read" },
-  { label: "Operating Hours", href: "/dashboard/operating-hours", icon: "🕐", permission: "clinic_hours.read" },
+  { label: "Operating Hours", href: "/dashboard/operating-hours", icon: "🕐", permission: "clinic_hours.manage" },
+  { label: "Leave Approval", href: "/dashboard/leaves", icon: "📋", permission: "doctor.leave.approve" },
 ];
 
 export function Sidenav() {

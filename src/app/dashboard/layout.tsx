@@ -7,12 +7,19 @@ import { Sidenav } from "@/components/sidenav";
 import { UserMenu } from "@/components/user-menu";
 import { Badge, LoadingScreen } from "@/components/ui";
 
+const ROLE_LABELS: Record<string, string> = {
+  "clinic-admin": "Clinic Admin",
+  "doctor": "Doctor",
+  "receptionist": "Receptionist",
+  "patient": "Patient",
+};
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { loading, isAuthenticated, isSuperAdmin } = useAuth();
+  const { loading, isAuthenticated, isSuperAdmin, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -38,7 +45,13 @@ export default function DashboardLayout({
             <h1 className="text-lg font-semibold text-gray-900">
               Clinic Management
             </h1>
-            <UserMenu badge={<Badge variant="info">Clinic Admin</Badge>} />
+            <UserMenu
+              badge={
+                <Badge variant="info">
+                  {user?.role_name || "User"}
+                </Badge>
+              }
+            />
           </div>
         </header>
         <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>

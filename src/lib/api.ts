@@ -156,6 +156,7 @@ export const authApi = {
         user_id: string;
         email: string;
         role_id?: string;
+        role_name?: string;
         tenant_id?: string;
         permissions?: string[];
       };
@@ -546,7 +547,9 @@ export interface DoctorSchedule {
 
 export interface DoctorLeave {
   id: string;
-  doctor_id: string;
+  user_id: string;
+  user_type: string;
+  user_name: string;
   leave_type: string;
   status: string;
   start_datetime: string;
@@ -556,6 +559,8 @@ export interface DoctorLeave {
   updated_at: string;
   cancelled_at?: string;
   cancelled_by?: string;
+  approved_by?: string;
+  approved_at?: string;
 }
 
 export const schedulingApi = {
@@ -572,9 +577,10 @@ export const schedulingApi = {
     request<{ data: DoctorSchedule }>(`/doctors/${doctorId}/schedule`, { method: "PUT", body: data }),
 
   // Doctor Leave
-  listLeaves: (params?: { doctor_id?: string; page?: number; page_size?: number }) => {
+  listLeaves: (params?: { user_id?: string; user_type?: string; page?: number; page_size?: number }) => {
     const query = new URLSearchParams();
-    if (params?.doctor_id) query.set("doctor_id", params.doctor_id);
+    if (params?.user_id) query.set("user_id", params.user_id);
+    if (params?.user_type) query.set("user_type", params.user_type);
     if (params?.page) query.set("page", String(params.page));
     if (params?.page_size) query.set("page_size", String(params.page_size));
     const qs = query.toString();
@@ -587,7 +593,8 @@ export const schedulingApi = {
     request<{ data: DoctorLeave }>(`/doctor-leaves/${id}`),
 
   createLeave: (data: {
-    doctor_id: string;
+    user_id: string;
+    user_type: "doctor" | "receptionist";
     start_datetime: string;
     end_datetime: string;
     leave_type: string;
@@ -608,6 +615,12 @@ export const schedulingApi = {
 
   cancelLeave: (id: string) =>
     request<{ data: DoctorLeave }>(`/doctor-leaves/${id}/cancel`, { method: "POST" }),
+
+  approveLeave: (id: string) =>
+    request<{ data: DoctorLeave }>(`/doctor-leaves/${id}/approve`, { method: "POST" }),
+
+  rejectLeave: (id: string) =>
+    request<{ data: DoctorLeave }>(`/doctor-leaves/${id}/reject`, { method: "POST" }),
 };
 
 // Patients API
